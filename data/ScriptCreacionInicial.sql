@@ -21,15 +21,13 @@ create table FSOCIETY.Cliente (
 go
 
 create table FSOCIETY.Tipo_Caja(
-	tipo_caja_id					 int identity(1,1) primary key,
-	tipo_caja_codigo				 decimal (18,0),
+	tipo_caja_codigo				 decimal (18,0) primary key,
 	tipo_caja_descripcion			 nvarchar (255)
 )
 go
 
 create table FSOCIETY.Tipo_Transmision(
-	tipo_transmision_id				 int identity(1,1) primary key,
-	tipo_transmision_codigo			 decimal (18,0),
+	tipo_transmision_codigo			 decimal (18,0) primary key,
 	tipo_transmision_descripccion	 nvarchar (255)
 )
 go
@@ -44,15 +42,13 @@ create table FSOCIETY.Sucursal(
 go
 
 create table FSOCIETY.Tipo_Auto(
-	tipo_auto_id					 int identity (1,1) primary key,
-	tipo_auto_codigo				 decimal (18),
+	tipo_auto_codigo				 decimal (18,0) primary key,
 	tipo_auto_desc					 nvarchar (255)
 )
 go
 
 create table FSOCIETY.Auto_Parte(
-	autoparte_id					 int identity (1,1) primary key,
-	autoparte_codigo				 decimal (18),
+	autoparte_codigo				 decimal (18,0) primary key,
 	autoparte_descripcion			 nvarchar (255)			null,
 	autoparte_rubro					 nvarchar (50)			null
 )
@@ -61,20 +57,20 @@ go
 --Tablas que tienen Foreign Keys
 create table FSOCIETY.Modelo(
 	modelo_id						 int identity (1,1) primary key,
-	modelo_codigo					 decimal (18),
+	modelo_codigo					 decimal (18,0),
 	modelo_nombre					 nvarchar (255),
-	modelo_potencia					 decimal (18),
-	modelo_tipo_caja				 int,
-	modelo_tipo_transmision			 int
+	modelo_potencia					 decimal (18,0),
+	modelo_tipo_caja				 decimal (18,0),
+	modelo_tipo_transmision			 decimal (18,0)
 )
 go
 
-alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_caja foreign key (modelo_tipo_caja) references FSOCIETY.Tipo_Caja(tipo_caja_id)
-alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_transmision foreign key (modelo_tipo_transmision) references FSOCIETY.Tipo_Transmision(tipo_transmision_id)
+alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_caja foreign key (modelo_tipo_caja) references FSOCIETY.Tipo_Caja(tipo_caja_codigo)
+alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_transmision foreign key (modelo_tipo_transmision) references FSOCIETY.Tipo_Transmision(tipo_transmision_codigo)
 
 create table FSOCIETY.Automovil(
 	auto_id							 int identity(1,1) primary key,
-	auto_tipo_auto					 int,
+	auto_tipo_auto					 decimal (18,0),
 	auto_modelo_id					 int,
 	auto_nro_chasis					 nvarchar (50),
 	auto_nro_motor					 nvarchar (50),
@@ -86,8 +82,9 @@ create table FSOCIETY.Automovil(
 )
 go
 
-alter table FSOCIETY.Automovil add constraint FK_auto_tipo_auto foreign key (auto_tipo_auto) references FSOCIETY.Tipo_Auto(tipo_auto_id)
+alter table FSOCIETY.Automovil add constraint FK_auto_tipo_auto foreign key (auto_tipo_auto) references FSOCIETY.Tipo_Auto(tipo_auto_codigo)
 alter table FSOCIETY.Automovil add constraint FK_auto_modelo foreign key (auto_modelo_id) references FSOCIETY.Modelo(modelo_id)
+go
 
 create table FSOCIETY.Factura(
 	factura_id					     int identity (1,1) primary key,
@@ -130,7 +127,7 @@ go
 create table FSOCIETY.Venta_Autoparte(
 	venta_autoparte_id				 int identity (1,1) primary key,
 	venta_autoparte_venta_id		 int,
-	venta_autoparte_autoparte_id	 int,
+	venta_autoparte_autoparte_id	 decimal (18,0),
 	venta_autoparte_cantidad		 int,
 	venta_autoparte_precio_unitario  decimal (18,2),
 	venta_autoparte_fecha			 datetime2 (3)
@@ -138,7 +135,7 @@ create table FSOCIETY.Venta_Autoparte(
 go
 
 alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_venta foreign key (venta_autoparte_venta_id) references FSOCIETY.Venta(venta_id)
-alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_autoparte foreign key (venta_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_id)
+alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_autoparte foreign key (venta_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
 go
 
 create table FSOCIETY.Compra(
@@ -171,14 +168,14 @@ go
 create table FSOCIETY.Compra_Autoparte(
 	compra_autoparte_id				 int identity (1,1) primary key,
 	compra_autoparte_compra_id		 int,
-	compra_autoparte_autoparte_id	 int,
+	compra_autoparte_autoparte_id	 decimal (18,0),
 	compra_autoparte_precio_unitario decimal (18,2),
 	compra_autoparte_cantidad		 int
 )
 go
 
 alter table FSOCIETY.Compra_Autoparte add constraint FK_compra_autoparte_compra foreign key (compra_autoparte_compra_id) references FSOCIETY.Compra(compra_id)
-alter table FSOCIETY.Compra_Autoparte add constraint FK_compra_autoparte_autoparte foreign key (compra_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_id)
+alter table FSOCIETY.Compra_Autoparte add constraint FK_compra_autoparte_autoparte foreign key (compra_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
 go
 
 /*Vistas*/
@@ -206,13 +203,13 @@ create view FSOCIETY.vw_datos_tipos_transmision as
 	select distinct tipo_transmision_codigo, tipo_transmision_desc from gd_esquema.Maestra where tipo_transmision_codigo is not null
 go
 
-create view vw_datos_modelos as
+create view FSOCIETY.vw_datos_modelos as
 	select distinct modelo_codigo, modelo_nombre, modelo_potencia from gd_esquema.Maestra
 go
 --Para la compra de autos voy a filtrar por la cantidad facturada, porque cuando vende autos está en NULL
 --Tambien voy a tener que sacar el campo cantidad de la tabla Compra_Auto
-select * from gd_esquema.Maestra
-go
+/*select * from gd_esquema.Maestra
+go*/
 
 /*Procedures*/
 create procedure FSOCIETY.PR_fill_cliente_table
@@ -267,10 +264,10 @@ go
 
 /*select * from Cliente
 select * from Sucursal
-select * from Tipo_Auto --TODO: Revisar si saco o no el id de esta tabla
-select * from Tipo_Caja --TODO: Revisar si saco o no el id de esta tabla
-select * from Auto_Parte --TODO: Revisar si saco o no el id de esta tabla
-select * from Tipo_Transmision --TODO: Revisar si saco o no el id de esta tabla
+select * from Tipo_Auto
+select * from Tipo_Caja
+select * from Auto_Parte
+select * from Tipo_Transmision
 */
 /*
 drop table FSOCIETY.Compra_Auto;
@@ -288,6 +285,21 @@ drop table FSOCIETY.Tipo_Caja;
 drop table FSOCIETY.Tipo_Transmision;
 drop table FSOCIETY.Cliente;
 drop table FSOCIETY.Sucursal;
+
+drop view FSOCIETY.vw_datos_clientes
+drop view FSOCIETY.vw_datos_sucursales
+drop view FSOCIETY.vw_datos_tipos_auto
+drop view FSOCIETY.vw_datos_tipos_cajas
+drop view FSOCIETY.vw_datos_tipos_transmision
+drop view FSOCIETY.vw_datos_autopartes
+drop view FSOCIETY.vw_datos_modelos
+
+drop procedure FSOCIETY.PR_fill_autoparte_table
+drop procedure FSOCIETY.PR_fill_cliente_table
+drop procedure FSOCIETY.PR_fill_sucursal_table
+drop procedure FSOCIETY.PR_fill_tipo_auto_table
+drop procedure FSOCIETY.PR_fill_tipo_caja_table
+drop procedure FSOCIETY.PR_fill_tipo_transmision_table
 
 go
 */
