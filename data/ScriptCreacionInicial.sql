@@ -2,7 +2,7 @@ use [GD2C2020]
 go
 
 /*Creacion del Schema*/
-if(not exists(select * from INFORMATION_SCHEMA.SCHEMATA where SCHEMA_NAME = 'FSOCIETY'))
+if(not exists(select * from sys.schemas where NAME = 'FSOCIETY'))
 	begin
 		exec('create schema[FSOCIETY]')
 		print 'Creacion de Schema lista'
@@ -178,34 +178,10 @@ alter table FSOCIETY.Compra_Autoparte add constraint FK_compra_autoparte_compra 
 alter table FSOCIETY.Compra_Autoparte add constraint FK_compra_autoparte_autoparte foreign key (compra_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
 go
 
-/*Vistas*/
-create view FSOCIETY.vw_datos_clientes as 
-	select distinct cliente_nombre, cliente_apellido, cliente_direccion, cliente_dni, cliente_mail, cliente_fecha_nac from gd_esquema.Maestra where CLIENTE_DNI is not null
-go
-
-create view FSOCIETY.vw_datos_sucursales as
-	select distinct sucursal_direccion, sucursal_mail, sucursal_telefono, sucursal_ciudad from gd_esquema.Maestra where sucursal_direccion is not null
-go
-
-create view FSOCIETY.vw_datos_tipos_auto as
-	select distinct tipo_auto_codigo, tipo_auto_desc from gd_esquema.Maestra where tipo_auto_codigo is not null
-go
-
-create view FSOCIETY.vw_datos_tipos_cajas as
-	select distinct tipo_caja_codigo, tipo_caja_desc from gd_esquema.Maestra where tipo_caja_codigo is not null
-go
-
-create view FSOCIETY.vw_datos_autopartes as
-	select distinct auto_parte_codigo, auto_parte_descripcion from gd_esquema.Maestra where auto_parte_codigo is not null
-go
-
-create view FSOCIETY.vw_datos_tipos_transmision as
-	select distinct tipo_transmision_codigo, tipo_transmision_desc from gd_esquema.Maestra where tipo_transmision_codigo is not null
-go
-
-create view FSOCIETY.vw_datos_modelos as
+--TODO: Borra esto
+/*create view FSOCIETY.vw_datos_modelos as
 	select distinct modelo_codigo, modelo_nombre, modelo_potencia from gd_esquema.Maestra
-go
+go*/
 --Para la compra de autos voy a filtrar por la cantidad facturada, porque cuando vende autos está en NULL
 --Tambien voy a tener que sacar el campo cantidad de la tabla Compra_Auto
 /*select * from gd_esquema.Maestra
@@ -217,7 +193,13 @@ as
 begin
 	
 	insert into FSOCIETY.Cliente (cliente_nombre, cliente_apellido, cliente_direccion, cliente_dni, cliente_mail, cliente_fecha_nac)
-	select * from vw_datos_clientes
+	select distinct cliente_nombre, cliente_apellido, cliente_direccion, cliente_dni, cliente_mail, cliente_fecha_nac
+	from gd_esquema.Maestra
+	where cliente_dni is not null
+	union
+	select distinct fac_cliente_nombre, fac_cliente_apellido, fac_cliente_direccion, fac_cliente_dni, fac_cliente_mail, fac_cliente_fecha_nac
+	from gd_esquema.Maestra
+	where fac_cliente_apellido is not null
 
 end
 go
@@ -226,7 +208,7 @@ create procedure FSOCIETY.PR_fill_sucursal_table
 as
 begin
 	insert into FSOCIETY.Sucursal (sucursal_direccion, sucursal_mail, sucursal_telefono, sucursal_ciudad)
-	select * from vw_datos_sucursales
+	select distinct sucursal_direccion, sucursal_mail, sucursal_telefono, sucursal_ciudad from gd_esquema.Maestra where sucursal_direccion is not null
 end
 go
 
@@ -234,7 +216,7 @@ create procedure FSOCIETY.PR_fill_tipo_auto_table
 as
 begin
 	insert into FSOCIETY.Tipo_Auto (tipo_auto_codigo, tipo_auto_desc)
-	select * from vw_datos_tipos_auto order by tipo_auto_codigo
+	select distinct tipo_auto_codigo, tipo_auto_desc from gd_esquema.Maestra where tipo_auto_codigo is not null
 end
 go
  
@@ -242,7 +224,7 @@ create procedure FSOCIETY.PR_fill_tipo_caja_table
 as
 begin
 	insert into FSOCIETY.Tipo_Caja (tipo_caja_codigo, tipo_caja_descripcion)
-	select * from vw_datos_tipos_cajas order by tipo_caja_codigo
+	select distinct tipo_caja_codigo, tipo_caja_desc from gd_esquema.Maestra where tipo_caja_codigo is not null
 end
 go
 
@@ -250,7 +232,7 @@ create procedure FSOCIETY.PR_fill_autoparte_table
 as
 begin
 	insert into FSOCIETY.Auto_Parte (autoparte_codigo, autoparte_descripcion)
-	select * from vw_datos_autopartes
+	select distinct auto_parte_codigo, auto_parte_descripcion from gd_esquema.Maestra where auto_parte_codigo is not null
 end
 go
 
@@ -258,16 +240,16 @@ create procedure FSOCIETY.PR_fill_tipo_transmision_table
 as
 begin
 	insert into FSOCIETY.Tipo_Transmision (tipo_transmision_codigo, tipo_transmision_descripccion)
-	select * from vw_datos_tipos_transmision order by tipo_transmision_codigo
+	select distinct tipo_transmision_codigo, tipo_transmision_desc from gd_esquema.Maestra where tipo_transmision_codigo is not null
 end
 go
 
-/*select * from Cliente
-select * from Sucursal
-select * from Tipo_Auto
-select * from Tipo_Caja
-select * from Auto_Parte
-select * from Tipo_Transmision
+/*select * from FSOCIETY.Cliente
+select * from FSOCIETY.Sucursal
+select * from FSOCIETY.Tipo_Auto
+select * from FSOCIETY.Tipo_Caja
+select * from FSOCIETY.Auto_Parte
+select * from FSOCIETY.Tipo_Transmision
 */
 /*
 drop table FSOCIETY.Compra_Auto;
@@ -285,14 +267,6 @@ drop table FSOCIETY.Tipo_Caja;
 drop table FSOCIETY.Tipo_Transmision;
 drop table FSOCIETY.Cliente;
 drop table FSOCIETY.Sucursal;
-
-drop view FSOCIETY.vw_datos_clientes
-drop view FSOCIETY.vw_datos_sucursales
-drop view FSOCIETY.vw_datos_tipos_auto
-drop view FSOCIETY.vw_datos_tipos_cajas
-drop view FSOCIETY.vw_datos_tipos_transmision
-drop view FSOCIETY.vw_datos_autopartes
-drop view FSOCIETY.vw_datos_modelos
 
 drop procedure FSOCIETY.PR_fill_autoparte_table
 drop procedure FSOCIETY.PR_fill_cliente_table
