@@ -95,7 +95,7 @@ go
 
 create table FSOCIETY.Factura(
 	factura_id					     int identity (1,1) primary key,
-	factura_nro_factura				 decimal (18) unique,
+	factura_nro_factura				 decimal (18),
 	factura_sucursal_id				 int,
 	factura_fecha					 datetime2 (3),
 	factura_cliente_id				 int,
@@ -265,12 +265,34 @@ begin
 end
 go
 
+create procedure FSOCIETY.PR_fill_factura_table
+as
+begin
+	insert into FSOCIETY.Factura (factura_nro_factura, factura_fecha, factura_precio_facturado, factura_cantidad_facturada, factura_sucursal_id, factura_cliente_id)
+	select distinct factura_nro, factura_fecha, precio_facturado, cant_facturada, sucursal_id, cliente_id from gd_esquema.Maestra gdm
+		join FSOCIETY.Sucursal s on s.sucursal_ciudad = gdm.fac_sucursal_ciudad and s.sucursal_telefono = gdm.fac_sucursal_telefono
+		join FSOCIETY.Cliente c on c.cliente_apellido = gdm.fac_cliente_apellido and c.cliente_nombre = gdm.fac_cliente_nombre and c.cliente_dni = gdm.fac_cliente_dni
+	where factura_nro is not null and cant_facturada is null
+	union
+	select distinct factura_nro, factura_fecha, sum(precio_facturado) precio_facturado, cant_facturada, sucursal_id, cliente_id from gd_esquema.Maestra gdm
+		join FSOCIETY.Sucursal s on s.sucursal_ciudad = gdm.fac_sucursal_ciudad and s.sucursal_telefono = gdm.fac_sucursal_telefono
+		join FSOCIETY.Cliente c on c.cliente_apellido = gdm.fac_cliente_apellido and c.cliente_nombre = gdm.fac_cliente_nombre and c.cliente_dni = gdm.fac_cliente_dni
+	where factura_nro is not null and cant_facturada is not null
+	group by factura_nro, factura_fecha, cant_facturada, cliente_id, sucursal_id
+end
+go
+
+exec FSOCIETY.PR_fill_cliente_table
+exec FSOCIETY.PR_fill_sucursal_table
+exec FSOCIETY.PR_fill_factura_table
+
 /*select * from FSOCIETY.Cliente
 select * from FSOCIETY.Sucursal
 select * from FSOCIETY.Tipo_Auto
 select * from FSOCIETY.Tipo_Caja
 select * from FSOCIETY.Auto_Parte
 select * from FSOCIETY.Tipo_Transmision
+select * from FSOCIETY.Tipo_Motor
 */
 /*
 drop table FSOCIETY.Compra_Auto;
@@ -286,6 +308,7 @@ drop table FSOCIETY.Tipo_Auto;
 drop table FSOCIETY.Modelo;
 drop table FSOCIETY.Tipo_Caja;
 drop table FSOCIETY.Tipo_Transmision;
+drop table FSOCIETY.Tipo_Motor;
 drop table FSOCIETY.Cliente;
 drop table FSOCIETY.Sucursal;
 
@@ -295,6 +318,8 @@ drop procedure FSOCIETY.PR_fill_sucursal_table
 drop procedure FSOCIETY.PR_fill_tipo_auto_table
 drop procedure FSOCIETY.PR_fill_tipo_caja_table
 drop procedure FSOCIETY.PR_fill_tipo_transmision_table
+drop procedure FSOCIETY.PR_fill_tipo_motor_table
+drop procedure FSOCIETY.PR_fill_factura_table
 
 go
 */
