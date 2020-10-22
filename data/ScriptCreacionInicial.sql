@@ -20,6 +20,12 @@ create table FSOCIETY.Cliente (
 )
 go
 
+create table FSOCIETY.Tipo_Motor(
+	tipo_motor_codigo 				decimal (18,0) primary key,
+    tipo_caja_descripcion 			nvarchar (255)
+)
+go
+
 create table FSOCIETY.Tipo_Caja(
 	tipo_caja_codigo				 decimal (18,0) primary key,
 	tipo_caja_descripcion			 nvarchar (255)
@@ -61,12 +67,14 @@ create table FSOCIETY.Modelo(
 	modelo_nombre					 nvarchar (255),
 	modelo_potencia					 decimal (18,0),
 	modelo_tipo_caja				 decimal (18,0),
-	modelo_tipo_transmision			 decimal (18,0)
+	modelo_tipo_transmision			 decimal (18,0),
+    modelo_tipo_motor 				 decimal (18,0)
 )
 go
 
 alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_caja foreign key (modelo_tipo_caja) references FSOCIETY.Tipo_Caja(tipo_caja_codigo)
 alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_transmision foreign key (modelo_tipo_transmision) references FSOCIETY.Tipo_Transmision(tipo_transmision_codigo)
+alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_motor foreign key (modelo_tipo_motor) references FSOCIETY.Tipo_Motor(tipo_motor_codigo)
 
 create table FSOCIETY.Automovil(
 	auto_id							 int identity(1,1) primary key,
@@ -78,7 +86,6 @@ create table FSOCIETY.Automovil(
 	auto_fecha_alta					 datetime2 (3),
 	auto_cant_kms					 decimal (18),
 	auto_fabricante_nombre			 nvarchar (255),
-	auto_tipo_motor_codigo			 decimal (18)
 )
 go
 
@@ -182,7 +189,7 @@ go
 /*create view FSOCIETY.vw_datos_modelos as
 	select distinct modelo_codigo, modelo_nombre, modelo_potencia from gd_esquema.Maestra
 go*/
---Para la compra de autos voy a filtrar por la cantidad facturada, porque cuando vende autos est· en NULL
+--Para la compra de autos voy a filtrar por la cantidad facturada, porque cuando vende autos est√° en NULL
 --Tambien voy a tener que sacar el campo cantidad de la tabla Compra_Auto
 /*select * from gd_esquema.Maestra
 go*/
@@ -243,6 +250,7 @@ begin
 	select distinct tipo_transmision_codigo, tipo_transmision_desc from gd_esquema.Maestra where tipo_transmision_codigo is not null
 end
 go
+
 
 /*select * from FSOCIETY.Cliente
 select * from FSOCIETY.Sucursal
