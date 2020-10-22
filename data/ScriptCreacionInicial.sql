@@ -22,7 +22,7 @@ go
 
 create table FSOCIETY.Tipo_Motor(
 	tipo_motor_codigo 				decimal (18,0) primary key,
-    tipo_caja_descripcion 			nvarchar (255)
+    tipo_motor_descripcion 			nvarchar (255)
 )
 go
 
@@ -251,6 +251,19 @@ begin
 end
 go
 
+create procedure FSOCIETY.PR_fill_tipo_motor_table
+as
+begin
+	insert into FSOCIETY.Tipo_Motor (tipo_motor_codigo)
+	select distinct tipo_motor_codigo from gd_esquema.Maestra where tipo_motor_codigo is not null order by tipo_motor_codigo
+
+	update FSOCIETY.Tipo_Motor set tipo_motor_descripcion = 'gas' where tipo_motor_codigo = 1001
+	update FSOCIETY.Tipo_Motor set tipo_motor_descripcion = 'electrico' where tipo_motor_codigo = 1002
+	update FSOCIETY.Tipo_Motor set tipo_motor_descripcion = 'diesel' where tipo_motor_codigo = 1003
+	update FSOCIETY.Tipo_Motor set tipo_motor_descripcion = 'gasolina' where tipo_motor_codigo = 1004
+	update FSOCIETY.Tipo_Motor set tipo_motor_descripcion = 'hibrido' where tipo_motor_codigo = 1005
+end
+go
 
 /*select * from FSOCIETY.Cliente
 select * from FSOCIETY.Sucursal
