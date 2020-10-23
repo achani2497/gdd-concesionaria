@@ -185,14 +185,18 @@ alter table FSOCIETY.Compra_Autoparte add constraint FK_compra_autoparte_compra 
 alter table FSOCIETY.Compra_Autoparte add constraint FK_compra_autoparte_autoparte foreign key (compra_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
 go
 
---TODO: Borra esto
-/*create view FSOCIETY.vw_datos_modelos as
-	select distinct modelo_codigo, modelo_nombre, modelo_potencia from gd_esquema.Maestra
-go*/
 --Para la compra de autos voy a filtrar por la cantidad facturada, porque cuando vende autos está en NULL
 --Tambien voy a tener que sacar el campo cantidad de la tabla Compra_Auto
-/*select * from gd_esquema.Maestra
-go*/
+
+/*Funciones*/
+create function FSOCIETY.FX_precio_unitario_autoparte(@cantidad decimal(18,0), @precio_total decimal(18,2))
+returns decimal(18,2)
+as
+begin
+	return @precio_total / @cantidad
+end
+go
+
 
 /*Procedures*/
 create procedure FSOCIETY.PR_fill_cliente_table
@@ -282,17 +286,39 @@ begin
 end
 go
 
+create procedure FSOCIETY.PR_fill_venta_autoparte_table
+as
+begin
+	insert FSOCIETY.Venta_Autoparte (venta_autoparte_autoparte_id, venta_autoparte_cantidad, venta_autoparte_precio_unitario, venta_autoparte_fecha)
+	select distinct ap.autoparte_codigo, m.cant_facturada, FSOCIETY.FX_precio_unitario_autoparte(m.cant_facturada, m.precio_facturado) as precio_unitario, m.factura_fecha 
+	from gd_esquema.Maestra m
+	join FSOCIETY.Auto_Parte ap on ap.autoparte_codigo = m.AUTO_PARTE_CODIGO
+	where m.cant_facturada is not null and m.compra_nro is null
+	group by ap.autoparte_codigo, m.cant_facturada, m.precio_facturado, m.factura_fecha
+end
+go
+
+/*
 exec FSOCIETY.PR_fill_cliente_table
 exec FSOCIETY.PR_fill_sucursal_table
+exec FSOCIETY.PR_fill_tipo_auto_table
+exec FSOCIETY.PR_fill_tipo_caja_table
+exec FSOCIETY.PR_fill_autoparte_table
+exec FSOCIETY.PR_fill_tipo_transmision_table
+exec FSOCIETY.PR_fill_tipo_motor_table
 exec FSOCIETY.PR_fill_factura_table
-
-/*select * from FSOCIETY.Cliente
+exec FSOCIETY.PR_fill_venta_autoparte_table
+*/
+/*
+select * from FSOCIETY.Cliente
 select * from FSOCIETY.Sucursal
 select * from FSOCIETY.Tipo_Auto
 select * from FSOCIETY.Tipo_Caja
 select * from FSOCIETY.Auto_Parte
 select * from FSOCIETY.Tipo_Transmision
 select * from FSOCIETY.Tipo_Motor
+select * from FSOCIETY.Factura
+select * from FSOCIETY.Auto_Parte
 */
 /*
 drop table FSOCIETY.Compra_Auto;
@@ -300,7 +326,6 @@ drop table FSOCIETY.Compra_Autoparte;
 drop table FSOCIETY.Compra;
 drop table FSOCIETY.Venta_Auto;
 drop table FSOCIETY.Venta_Autoparte;
-drop table FSOCIETY.Venta;
 drop table FSOCIETY.Automovil;
 drop table FSOCIETY.Auto_Parte;
 drop table FSOCIETY.Factura;
@@ -312,14 +337,17 @@ drop table FSOCIETY.Tipo_Motor;
 drop table FSOCIETY.Cliente;
 drop table FSOCIETY.Sucursal;
 
-drop procedure FSOCIETY.PR_fill_autoparte_table
+drop function FSOCIETY.FX_precio_unitario_autoparte
+
 drop procedure FSOCIETY.PR_fill_cliente_table
 drop procedure FSOCIETY.PR_fill_sucursal_table
 drop procedure FSOCIETY.PR_fill_tipo_auto_table
 drop procedure FSOCIETY.PR_fill_tipo_caja_table
+drop procedure FSOCIETY.PR_fill_autoparte_table
 drop procedure FSOCIETY.PR_fill_tipo_transmision_table
 drop procedure FSOCIETY.PR_fill_tipo_motor_table
 drop procedure FSOCIETY.PR_fill_factura_table
+drop procedure FSOCIETY.PR_fill_venta_autoparte_table
 
 go
 */
