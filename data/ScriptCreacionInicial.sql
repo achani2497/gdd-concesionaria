@@ -108,16 +108,6 @@ alter table FSOCIETY.Factura add constraint FK_factura_sucursal foreign key (fac
 alter table FSOCIETY.Factura add constraint FK_factura_cliente foreign key (factura_cliente_id) references FSOCIETY.Cliente(cliente_id)
 go
 
-create table FSOCIETY.Venta(
-	venta_id						 int identity (1,1) primary key,
-	venta_factura_id				 int,
-	venta_tipo_venta				 nchar(2)
-)
-go
-
-alter table FSOCIETY.Venta add constraint FK_venta_factura foreign key (venta_factura_id) references FSOCIETY.Factura(factura_id)
-go
-
 create table FSOCIETY.Venta_Auto(
 	venta_auto_id					 int identity (1,1) primary key,
 	venta_auto_auto_id				 int,
@@ -128,7 +118,6 @@ create table FSOCIETY.Venta_Auto(
 go
 
 alter table FSOCIETY.Venta_Auto add constraint FK_venta_auto_auto foreign key (venta_auto_auto_id) references FSOCIETY.Automovil(auto_id)
-alter table FSOCIETY.Venta_Auto add constraint FK_venta_auto_venta foreign key (venta_auto_venta_id) references FSOCIETY.Venta(venta_id)
 go
 
 create table FSOCIETY.Venta_Autoparte(
@@ -141,7 +130,6 @@ create table FSOCIETY.Venta_Autoparte(
 )
 go
 
-alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_venta foreign key (venta_autoparte_venta_id) references FSOCIETY.Venta(venta_id)
 alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_autoparte foreign key (venta_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
 go
 
@@ -197,6 +185,29 @@ begin
 end
 go
 
+create function FSOCIETY.FX_tipo_compra(@cantidad decimal(18,0))
+returns nchar(2)
+as
+begin
+	if(@cantidad is not null)
+		begin
+			return 'ap'
+		end
+
+		return 'a'
+
+end
+go
+
+/*Vistas*/
+create view FSOCIETY.VW_datos_compras_table
+as
+	select distinct s.sucursal_id, c.cliente_id, FSOCIETY.FX_tipo_compra(m.compra_cant) as tipo_compra, m.compra_fecha, m.compra_nro, m.compra_cant, m.compra_precio
+	from gd_esquema.Maestra m
+	join FSOCIETY.Sucursal s on m.sucursal_ciudad = s.sucursal_ciudad and m.sucursal_direccion = s.sucursal_direccion
+	join FSOCIETY.Cliente c on m.cliente_apellido = c.cliente_apellido and m.cliente_dni = c.cliente_dni and m.cliente_nombre = c.cliente_nombre
+	where m.compra_nro is not null and m.factura_nro is null and m.COMPRA_CANT is not null
+go
 
 /*Procedures*/
 create procedure FSOCIETY.PR_fill_cliente_table
@@ -298,6 +309,23 @@ begin
 end
 go
 
+create procedure FSOCIETY.PR_fill_compra_table
+as
+begin
+
+	insert into FSOCIETY.Compra(compra_sucursal_id, compra_cliente_id, compra_tipo_compra, compra_fecha, compra_nro)
+	select sucursal_id, cliente_id, tipo_compra, compra_fecha, compra_nro from FSOCIETY.VW_datos_compras_table
+
+	insert into FSOCIETY.Compra(compra_sucursal_id, compra_cliente_id, compra_tipo_compra, compra_fecha, compra_nro)
+	select s.sucursal_id, c.cliente_id, FSOCIETY.FX_tipo_compra(m.compra_cant) as tipo_compra, m.compra_fecha, m.compra_nro 
+	from gd_esquema.Maestra m
+	join FSOCIETY.Sucursal s on m.sucursal_ciudad = s.sucursal_ciudad and m.sucursal_direccion = s.sucursal_direccion
+	join FSOCIETY.Cliente c on m.cliente_apellido = c.cliente_apellido and m.cliente_dni = c.cliente_dni and m.cliente_nombre = c.cliente_nombre
+	where m.compra_nro is not null and m.factura_nro is null and m.COMPRA_CANT is null
+
+end
+go
+
 /*
 exec FSOCIETY.PR_fill_cliente_table
 exec FSOCIETY.PR_fill_sucursal_table
@@ -338,6 +366,7 @@ drop table FSOCIETY.Cliente;
 drop table FSOCIETY.Sucursal;
 
 drop function FSOCIETY.FX_precio_unitario_autoparte
+drop function FSOCIETY.FX_tipo_compra
 
 drop procedure FSOCIETY.PR_fill_cliente_table
 drop procedure FSOCIETY.PR_fill_sucursal_table
@@ -348,6 +377,6 @@ drop procedure FSOCIETY.PR_fill_tipo_transmision_table
 drop procedure FSOCIETY.PR_fill_tipo_motor_table
 drop procedure FSOCIETY.PR_fill_factura_table
 drop procedure FSOCIETY.PR_fill_venta_autoparte_table
-
+drop procedure FSOCIETY.PR_fill_compra_table
 go
 */
