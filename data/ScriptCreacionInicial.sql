@@ -391,7 +391,6 @@ drop table FSOCIETY.Tipo_Transmision;
 drop table FSOCIETY.Tipo_Motor;
 drop table FSOCIETY.Cliente;
 drop table FSOCIETY.Sucursal;
-drop table FSOCIETY.Fabricante
 
 drop function FSOCIETY.FX_precio_unitario_autoparte
 drop function FSOCIETY.FX_tipo_compra
