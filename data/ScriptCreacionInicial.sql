@@ -7,6 +7,7 @@ if(not exists(select * from sys.schemas where NAME = 'FSOCIETY'))
 		exec('create schema[FSOCIETY]')
 		print 'Creacion de Schema lista'
 	end
+go
 
 create table FSOCIETY.Cliente (
 	cliente_id						 int identity(1,1) primary key,
@@ -61,37 +62,35 @@ create table FSOCIETY.Auto_Parte(
 )
 go
 
---Tablas que tienen Foreign Keys
 create table FSOCIETY.Modelo(
-	modelo_id						 int identity (1,1) primary key,
-	modelo_codigo					 decimal (18,0),
+	modelo_codigo					 decimal (18,0) primary key,
 	modelo_nombre					 nvarchar (255),
-	modelo_potencia					 decimal (18,0),
-	modelo_tipo_caja				 decimal (18,0),
-	modelo_tipo_transmision			 decimal (18,0),
-    modelo_tipo_motor 				 decimal (18,0)
+	modelo_potencia					 decimal (18,0)
 )
 go
 
-alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_caja foreign key (modelo_tipo_caja) references FSOCIETY.Tipo_Caja(tipo_caja_codigo)
-alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_transmision foreign key (modelo_tipo_transmision) references FSOCIETY.Tipo_Transmision(tipo_transmision_codigo)
-alter table FSOCIETY.Modelo add constraint FK_modelo_tipo_motor foreign key (modelo_tipo_motor) references FSOCIETY.Tipo_Motor(tipo_motor_codigo)
-
+--Tablas que tienen Foreign Keys
 create table FSOCIETY.Automovil(
 	auto_id							 int identity(1,1) primary key,
 	auto_tipo_auto					 decimal (18,0),
-	auto_modelo_id					 int,
+	auto_modelo_codigo				 decimal (18,0),
 	auto_nro_chasis					 nvarchar (50),
 	auto_nro_motor					 nvarchar (50),
+	auto_tipo_motor					 decimal (18),
 	auto_patente					 nvarchar (50),
 	auto_fecha_alta					 datetime2 (3),
 	auto_cant_kms					 decimal (18),
 	auto_fabricante_nombre			 nvarchar (255),
+	auto_tipo_caja_codigo			 decimal(18),
+	auto_tipo_transmision_codigo	 decimal(18)
 )
 go
 
-alter table FSOCIETY.Automovil add constraint FK_auto_tipo_auto foreign key (auto_tipo_auto) references FSOCIETY.Tipo_Auto(tipo_auto_codigo)
-alter table FSOCIETY.Automovil add constraint FK_auto_modelo foreign key (auto_modelo_id) references FSOCIETY.Modelo(modelo_id)
+alter table FSOCIETY.Automovil add constraint FK_auto_tipo_auto	foreign key (auto_tipo_auto) references FSOCIETY.Tipo_Auto(tipo_auto_codigo)
+alter table FSOCIETY.Automovil add constraint FK_auto_modelo foreign key (auto_modelo_codigo) references FSOCIETY.Modelo(modelo_codigo)
+alter table FSOCIETY.Automovil add constraint FK_auto_motor	foreign key (auto_tipo_motor) references FSOCIETY.Tipo_Motor(tipo_motor_codigo)
+alter table FSOCIETY.Automovil add constraint FK_auto_tipo_caja	foreign key (auto_tipo_caja_codigo) references FSOCIETY.Tipo_Caja(tipo_caja_codigo)
+alter table FSOCIETY.Automovil add constraint FK_auto_tipo_transmision foreign key (auto_tipo_transmision_codigo) references FSOCIETY.Tipo_Transmision(tipo_transmision_codigo)
 go
 
 create table FSOCIETY.Factura(
@@ -150,14 +149,12 @@ go
 
 create table FSOCIETY.Compra_Auto(
 	compra_auto_id					 int identity (1,1) primary key,
-	compra_auto_compra_id			 decimal(18,0),
-	compra_auto_auto_id				 int,
-	compra_auto_precio				 decimal (18,2),
-	compra_auto_cantidad			 int
+	compra_auto_compra_nro			 decimal(18,0),
+	compra_auto_auto_id				 int
 )
 go
 
-alter table FSOCIETY.Compra_Auto add constraint FK_compra_auto_compra foreign key (compra_auto_compra_id) references FSOCIETY.Compra(compra_nro)
+alter table FSOCIETY.Compra_Auto add constraint FK_compra_auto_compra foreign key (compra_auto_compra_nro) references FSOCIETY.Compra(compra_nro)
 alter table FSOCIETY.Compra_Auto add constraint FK_compra_auto_auto foreign key (compra_auto_auto_id) references FSOCIETY.Automovil(auto_id)
 go
 
@@ -319,6 +316,15 @@ begin
 end
 go
 
+create procedure FSOCIETY.PR_fill_modelo_table
+as
+begin
+	
+	insert into FSOCIETY.Modelo (modelo_codigo, modelo_nombre, modelo_potencia)
+	select distinct modelo_codigo, modelo_nombre, modelo_potencia from gd_esquema.Maestra
+end
+go
+
 create procedure FSOCIETY.PR_fill_compra_table
 as
 begin
@@ -349,7 +355,30 @@ begin
 end
 go
 
-/*
+create procedure FSOCIETY.PR_fill_automovil_table
+as
+begin
+
+	insert into FSOCIETY.Automovil (auto_tipo_auto, auto_modelo_codigo, auto_nro_chasis, auto_nro_motor, auto_tipo_motor, auto_patente, auto_fecha_alta, auto_cant_kms, auto_fabricante_nombre, auto_tipo_caja_codigo, auto_tipo_transmision_codigo)
+	select distinct m.tipo_auto_codigo, m.modelo_codigo, m.auto_nro_chasis, m.auto_nro_motor, m.tipo_motor_codigo, m.auto_patente, m.auto_fecha_alta, m.auto_cant_kms, m.fabricante_nombre, m.tipo_caja_codigo, m.tipo_transmision_codigo 
+	from gd_esquema.Maestra m 
+	where m.auto_nro_motor is not null
+
+end
+go
+
+create procedure FSOCIETY.PR_fill_compra_auto_table
+as
+begin
+
+	insert into FSOCIETY.Compra_Auto (compra_auto_compra_nro, compra_auto_auto_id)
+	--TODO 
+	select distinct MODELO_CODIGO, AUTO_NRO_MOTOR, AUTO_NRO_CHASIS TIPO_CAJA_CODIGO, TIPO_CAJA_DESC, TIPO_TRANSMISION_CODIGO, TIPO_TRANSMISION_DESC, TIPO_MOTOR_CODIGO, FABRICANTE_NOMBRE 
+	from gd_esquema.Maestra
+
+end
+go
+
 exec FSOCIETY.PR_fill_cliente_table
 exec FSOCIETY.PR_fill_sucursal_table
 exec FSOCIETY.PR_fill_tipo_auto_table
@@ -359,21 +388,26 @@ exec FSOCIETY.PR_fill_tipo_transmision_table
 exec FSOCIETY.PR_fill_tipo_motor_table
 exec FSOCIETY.PR_fill_factura_table
 exec FSOCIETY.PR_fill_venta_autoparte_table
+exec FSOCIETY.PR_fill_modelo_table
 exec FSOCIETY.PR_fill_compra_table
 exec FSOCIETY.PR_fill_compra_autoparte_table
-*/
+exec FSOCIETY.PR_fill_automovil_table
+
 /*
 select * from FSOCIETY.Cliente
 select * from FSOCIETY.Sucursal
 select * from FSOCIETY.Tipo_Auto
 select * from FSOCIETY.Tipo_Caja
 select * from FSOCIETY.Auto_Parte
+select * from FSOCIETY.Modelo
 select * from FSOCIETY.Tipo_Transmision
 select * from FSOCIETY.Tipo_Motor
 select * from FSOCIETY.Factura
+select * from FSOCIETY.Venta_Autoparte
 select * from FSOCIETY.Auto_Parte
 select * from FSOCIETY.Compra
 select * from FSOCIETY.Compra_Autoparte
+select * from FSOCIETY.Automovil
 */
 /*
 drop table FSOCIETY.Compra_Auto;
@@ -383,9 +417,9 @@ drop table FSOCIETY.Venta_Auto;
 drop table FSOCIETY.Venta_Autoparte;
 drop table FSOCIETY.Automovil;
 drop table FSOCIETY.Auto_Parte;
+drop table FSOCIETY.Modelo;
 drop table FSOCIETY.Factura;
 drop table FSOCIETY.Tipo_Auto;
-drop table FSOCIETY.Modelo;
 drop table FSOCIETY.Tipo_Caja;
 drop table FSOCIETY.Tipo_Transmision;
 drop table FSOCIETY.Tipo_Motor;
@@ -402,11 +436,13 @@ drop procedure FSOCIETY.PR_fill_sucursal_table
 drop procedure FSOCIETY.PR_fill_tipo_auto_table
 drop procedure FSOCIETY.PR_fill_tipo_caja_table
 drop procedure FSOCIETY.PR_fill_autoparte_table
+drop procedure FSOCIETY.PR_fill_modelo_table
 drop procedure FSOCIETY.PR_fill_tipo_transmision_table
 drop procedure FSOCIETY.PR_fill_tipo_motor_table
 drop procedure FSOCIETY.PR_fill_factura_table
 drop procedure FSOCIETY.PR_fill_venta_autoparte_table
 drop procedure FSOCIETY.PR_fill_compra_table
 drop procedure FSOCIETY.PR_fill_compra_autoparte_table
+drop procedure FSOCIETY.PR_fill_automovil_table
 go
 */
