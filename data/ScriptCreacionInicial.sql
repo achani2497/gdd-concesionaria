@@ -197,6 +197,15 @@ begin
 end
 go
 
+create function FSOCIETY.FX_portentaje_adicional_auto(@precio_og decimal(18,2))
+returns decimal(18,2)
+begin
+
+	return @precio_og * 1.2
+
+end
+go
+
 /*Vistas*/
 create view FSOCIETY.VW_datos_compras_table
 as
@@ -206,14 +215,11 @@ as
 	join FSOCIETY.Sucursal s on m.sucursal_ciudad = s.sucursal_ciudad and m.sucursal_direccion = s.sucursal_direccion
 	join FSOCIETY.Cliente c on m.cliente_apellido = c.cliente_apellido and m.cliente_dni = c.cliente_dni and m.cliente_nombre = c.cliente_nombre
 	where m.compra_nro is not null and m.factura_nro is null and m.COMPRA_CANT is not null
+go
 
-	--test
-	/*select distinct s.sucursal_id, c.cliente_id, FSOCIETY.FX_tipo_compra(m.compra_cant) as tipo_compra, m.compra_fecha, m.compra_nro, m.compra_cant, sum(m.compra_precio)
-	from gd_esquema.Maestra m
-	join FSOCIETY.Sucursal s on m.sucursal_ciudad = s.sucursal_ciudad and m.sucursal_direccion = s.sucursal_direccion
-	join FSOCIETY.Cliente c on m.cliente_apellido = c.cliente_apellido and m.cliente_dni = c.cliente_dni and m.cliente_nombre = c.cliente_nombre
-	where m.compra_nro is not null and m.factura_nro is null and m.COMPRA_CANT is not null
-	group by s.sucursal_id, c.cliente_id, m.compra_nro*/
+create view FSOCIETY.VW_datos_compras_autos
+as
+	select distinct COMPRA_NRO, AUTO_NRO_CHASIS, AUTO_NRO_MOTOR, AUTO_PATENTE from gd_esquema.Maestra where COMPRA_CANT is null and PRECIO_FACTURADO is null
 go
 
 /*Procedures*/
@@ -367,14 +373,27 @@ begin
 end
 go
 
+create procedure FSOCIETY.PR_fill_venta_auto_table
+as
+begin
+
+	insert into FSOCIETY.Venta_Auto (venta_auto_auto_id, venta_auto_precio_sin_iva, venta_auto_precio_con_iva, venta_auto_venta_id)
+	select distinct a.auto_id, m.Compra_precio as precio_compra, FSOCIETY.FX_portentaje_adicional_auto(m.compra_precio) as precio_venta, f.factura_id from gd_esquema.Maestra m 
+	join FSOCIETY.Automovil a on a.auto_nro_chasis = m.auto_nro_chasis
+	join FSOCIETY.Factura f on f.factura_nro_factura = m.factura_nro
+	where m.cant_facturada is null and m.auto_nro_chasis is not null and m.factura_nro is not null
+
+end
+go
+
+
 create procedure FSOCIETY.PR_fill_compra_auto_table
 as
 begin
 
 	insert into FSOCIETY.Compra_Auto (compra_auto_compra_nro, compra_auto_auto_id)
-	--TODO 
-	select distinct MODELO_CODIGO, AUTO_NRO_MOTOR, AUTO_NRO_CHASIS TIPO_CAJA_CODIGO, TIPO_CAJA_DESC, TIPO_TRANSMISION_CODIGO, TIPO_TRANSMISION_DESC, TIPO_MOTOR_CODIGO, FABRICANTE_NOMBRE 
-	from gd_esquema.Maestra
+	select ca.compra_nro, a.auto_id from FSOCIETY.VW_datos_compras_autos ca 
+	join FSOCIETY.Automovil a on a.auto_nro_chasis = ca.auto_nro_chasis and a.auto_nro_motor = ca.auto_nro_motor and a.auto_patente = ca.AUTO_PATENTE
 
 end
 go
@@ -392,6 +411,8 @@ exec FSOCIETY.PR_fill_modelo_table
 exec FSOCIETY.PR_fill_compra_table
 exec FSOCIETY.PR_fill_compra_autoparte_table
 exec FSOCIETY.PR_fill_automovil_table
+exec FSOCIETY.PR_fill_venta_auto_table
+exec FSOCIETY.PR_fill_compra_auto_table
 
 /*
 select * from FSOCIETY.Cliente
@@ -404,10 +425,11 @@ select * from FSOCIETY.Tipo_Transmision
 select * from FSOCIETY.Tipo_Motor
 select * from FSOCIETY.Factura
 select * from FSOCIETY.Venta_Autoparte
-select * from FSOCIETY.Auto_Parte
 select * from FSOCIETY.Compra
 select * from FSOCIETY.Compra_Autoparte
 select * from FSOCIETY.Automovil
+select * from FSOCIETY.Venta_Auto
+select * from FSOCIETY.Compra_Auto
 */
 /*
 drop table FSOCIETY.Compra_Auto;
@@ -428,8 +450,10 @@ drop table FSOCIETY.Sucursal;
 
 drop function FSOCIETY.FX_precio_unitario_autoparte
 drop function FSOCIETY.FX_tipo_compra
+drop function FSOCIETY.FX_portentaje_adicional_auto
 
 drop view FSOCIETY.VW_datos_compras_table
+drop view FSOCIETY.VW_datos_compras_autos
 
 drop procedure FSOCIETY.PR_fill_cliente_table
 drop procedure FSOCIETY.PR_fill_sucursal_table
@@ -444,5 +468,7 @@ drop procedure FSOCIETY.PR_fill_venta_autoparte_table
 drop procedure FSOCIETY.PR_fill_compra_table
 drop procedure FSOCIETY.PR_fill_compra_autoparte_table
 drop procedure FSOCIETY.PR_fill_automovil_table
+drop procedure FSOCIETY.PR_fill_venta_auto_table
+drop procedure FSOCIETY.PR_fill_compra_auto_table
 go
 */
