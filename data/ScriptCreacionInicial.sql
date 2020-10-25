@@ -413,47 +413,16 @@ exec FSOCIETY.PR_fill_compra_autoparte_table
 exec FSOCIETY.PR_fill_automovil_table
 exec FSOCIETY.PR_fill_venta_auto_table
 exec FSOCIETY.PR_fill_compra_auto_table
-
-/*
-select * from FSOCIETY.Cliente
-select * from FSOCIETY.Sucursal
-select * from FSOCIETY.Tipo_Auto
-select * from FSOCIETY.Tipo_Caja
-select * from FSOCIETY.Auto_Parte
-select * from FSOCIETY.Modelo
-select * from FSOCIETY.Tipo_Transmision
-select * from FSOCIETY.Tipo_Motor
-select * from FSOCIETY.Factura
-select * from FSOCIETY.Venta_Autoparte
-select * from FSOCIETY.Compra
-select * from FSOCIETY.Compra_Autoparte
-select * from FSOCIETY.Automovil
-select * from FSOCIETY.Venta_Auto
-select * from FSOCIETY.Compra_Auto
-*/
-/*
-drop table FSOCIETY.Compra_Auto;
-drop table FSOCIETY.Compra_Autoparte;
-drop table FSOCIETY.Compra;
-drop table FSOCIETY.Venta_Auto;
-drop table FSOCIETY.Venta_Autoparte;
-drop table FSOCIETY.Automovil;
-drop table FSOCIETY.Auto_Parte;
-drop table FSOCIETY.Modelo;
-drop table FSOCIETY.Factura;
-drop table FSOCIETY.Tipo_Auto;
-drop table FSOCIETY.Tipo_Caja;
-drop table FSOCIETY.Tipo_Transmision;
-drop table FSOCIETY.Tipo_Motor;
-drop table FSOCIETY.Cliente;
-drop table FSOCIETY.Sucursal;
+go
 
 drop function FSOCIETY.FX_precio_unitario_autoparte
 drop function FSOCIETY.FX_tipo_compra
 drop function FSOCIETY.FX_portentaje_adicional_auto
+go
 
 drop view FSOCIETY.VW_datos_compras_table
 drop view FSOCIETY.VW_datos_compras_autos
+go
 
 drop procedure FSOCIETY.PR_fill_cliente_table
 drop procedure FSOCIETY.PR_fill_sucursal_table
@@ -471,4 +440,3 @@ drop procedure FSOCIETY.PR_fill_automovil_table
 drop procedure FSOCIETY.PR_fill_venta_auto_table
 drop procedure FSOCIETY.PR_fill_compra_auto_table
 go
-*/
