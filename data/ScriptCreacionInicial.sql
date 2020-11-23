@@ -69,6 +69,11 @@ create table FSOCIETY.Modelo(
 )
 go
 
+create table FSOCIETY.Fabricante(
+	fabricante_codigo				int primary key,
+	fabricante_nombre				nvarchar (255)
+) -- TODO: Falta llenar esto
+
 --Tablas que tienen Foreign Keys
 create table FSOCIETY.Automovil(
 	auto_id							 int identity(1,1) primary key,
