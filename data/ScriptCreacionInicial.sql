@@ -54,14 +54,6 @@ create table FSOCIETY.Tipo_Auto(
 )
 go
 
-create table FSOCIETY.Auto_Parte(
-	autoparte_codigo				 decimal (18,0) primary key,
-	autoparte_descripcion			 nvarchar (255)			null,
-	autoparte_rubro					 nvarchar (50)			null,
-	autoparte_fabricante			 nvarchar (255)
-)
-go
-
 create table FSOCIETY.Modelo(
 	modelo_codigo					 decimal (18,0) primary key,
 	modelo_nombre					 nvarchar (255),
@@ -70,11 +62,24 @@ create table FSOCIETY.Modelo(
 go
 
 create table FSOCIETY.Fabricante(
-	fabricante_codigo				int primary key,
+	fabricante_codigo				int identity(1,1) primary key,
 	fabricante_nombre				nvarchar (255)
-) -- TODO: Falta llenar esto
+)
+go
 
 --Tablas que tienen Foreign Keys
+
+create table FSOCIETY.Auto_Parte(
+	autoparte_codigo				 decimal (18,0) primary key,
+	autoparte_descripcion			 nvarchar (255)			null,
+	autoparte_rubro					 nvarchar (50)			null,
+	autoparte_fabricante_codigo		 int
+)
+go
+
+alter table FSOCIETY.Auto_parte add constraint FK_autoparte_fabricante foreign key (autoparte_fabricante_codigo) references FSOCIETY.Fabricante(fabricante_codigo)
+go
+
 create table FSOCIETY.Automovil(
 	auto_id							 int identity(1,1) primary key,
 	auto_tipo_auto					 decimal (18,0),
@@ -85,7 +90,7 @@ create table FSOCIETY.Automovil(
 	auto_patente					 nvarchar (50),
 	auto_fecha_alta					 datetime2 (3),
 	auto_cant_kms					 decimal (18),
-	auto_fabricante_nombre			 nvarchar (255),
+	auto_fabricante_codigo			 int,
 	auto_tipo_caja_codigo			 decimal(18),
 	auto_tipo_transmision_codigo	 decimal(18)
 )
@@ -96,6 +101,7 @@ alter table FSOCIETY.Automovil add constraint FK_auto_modelo foreign key (auto_m
 alter table FSOCIETY.Automovil add constraint FK_auto_motor	foreign key (auto_tipo_motor) references FSOCIETY.Tipo_Motor(tipo_motor_codigo)
 alter table FSOCIETY.Automovil add constraint FK_auto_tipo_caja	foreign key (auto_tipo_caja_codigo) references FSOCIETY.Tipo_Caja(tipo_caja_codigo)
 alter table FSOCIETY.Automovil add constraint FK_auto_tipo_transmision foreign key (auto_tipo_transmision_codigo) references FSOCIETY.Tipo_Transmision(tipo_transmision_codigo)
+alter table FSOCIETY.Automovil add constraint FK_auto_fabricante foreign key (auto_fabricante_codigo) references FSOCIETY.Fabricante(fabricante_codigo)
 go
 
 create table FSOCIETY.Factura(
@@ -268,11 +274,21 @@ begin
 end
 go
 
+create procedure FSOCIETY.PR_fill_fabricante_table
+as
+begin
+	insert into FSOCIETY.Fabricante
+	select distinct g.FABRICANTE_NOMBRE from gd_esquema.Maestra g
+end
+go
+
 create procedure FSOCIETY.PR_fill_autoparte_table
 as
 begin
-	insert into FSOCIETY.Auto_Parte (autoparte_codigo, autoparte_descripcion, autoparte_fabricante)
-	select distinct auto_parte_codigo, auto_parte_descripcion, fabricante_nombre from gd_esquema.Maestra where auto_parte_codigo is not null
+	insert into FSOCIETY.Auto_Parte (autoparte_codigo, autoparte_descripcion, autoparte_fabricante_codigo)
+	select distinct m.auto_parte_codigo, m.auto_parte_descripcion, f.fabricante_codigo from gd_esquema.Maestra m
+		join Fabricante f on m.fabricante_nombre like f.fabricante_nombre
+	where auto_parte_codigo is not null
 end
 go
 
@@ -370,9 +386,10 @@ create procedure FSOCIETY.PR_fill_automovil_table
 as
 begin
 
-	insert into FSOCIETY.Automovil (auto_tipo_auto, auto_modelo_codigo, auto_nro_chasis, auto_nro_motor, auto_tipo_motor, auto_patente, auto_fecha_alta, auto_cant_kms, auto_fabricante_nombre, auto_tipo_caja_codigo, auto_tipo_transmision_codigo)
-	select distinct m.tipo_auto_codigo, m.modelo_codigo, m.auto_nro_chasis, m.auto_nro_motor, m.tipo_motor_codigo, m.auto_patente, m.auto_fecha_alta, m.auto_cant_kms, m.fabricante_nombre, m.tipo_caja_codigo, m.tipo_transmision_codigo 
+	insert into FSOCIETY.Automovil (auto_tipo_auto, auto_modelo_codigo, auto_nro_chasis, auto_nro_motor, auto_tipo_motor, auto_patente, auto_fecha_alta, auto_cant_kms, auto_fabricante_codigo, auto_tipo_caja_codigo, auto_tipo_transmision_codigo)
+	select distinct m.tipo_auto_codigo, m.modelo_codigo, m.auto_nro_chasis, m.auto_nro_motor, m.tipo_motor_codigo, m.auto_patente, m.auto_fecha_alta, m.auto_cant_kms, f.fabricante_codigo, m.tipo_caja_codigo, m.tipo_transmision_codigo 
 	from gd_esquema.Maestra m 
+	join Fabricante f on m.fabricante_nombre like f.fabricante_nombre
 	where m.auto_nro_motor is not null
 
 end
@@ -407,6 +424,7 @@ exec FSOCIETY.PR_fill_cliente_table
 exec FSOCIETY.PR_fill_sucursal_table
 exec FSOCIETY.PR_fill_tipo_auto_table
 exec FSOCIETY.PR_fill_tipo_caja_table
+exec FSOCIETY.PR_fill_fabricante_table
 exec FSOCIETY.PR_fill_autoparte_table
 exec FSOCIETY.PR_fill_tipo_transmision_table
 exec FSOCIETY.PR_fill_tipo_motor_table
@@ -433,6 +451,7 @@ drop procedure FSOCIETY.PR_fill_cliente_table
 drop procedure FSOCIETY.PR_fill_sucursal_table
 drop procedure FSOCIETY.PR_fill_tipo_auto_table
 drop procedure FSOCIETY.PR_fill_tipo_caja_table
+drop procedure FSOCIETY.PR_fill_fabricante_table
 drop procedure FSOCIETY.PR_fill_autoparte_table
 drop procedure FSOCIETY.PR_fill_modelo_table
 drop procedure FSOCIETY.PR_fill_tipo_transmision_table
