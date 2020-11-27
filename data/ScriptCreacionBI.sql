@@ -43,6 +43,22 @@ go
 		select * from FSOCIETY.Sucursal
 		go
 
+
+	--Factura
+	CREATE TABLE FSOCIETY.BI_factura(
+		factura_nro_factura decimal(18,0) primary key,
+		factura_sucursal int,
+		factura_anio int,
+		factura_mes int,
+		factura_precio_facturado decimal(18,2),
+		factura_cantidad_facturada decimal(18,0)
+	)
+	GO
+		--Fill
+		INSERT INTO FSOCIETY.BI_factura
+		SELECT factura_nro_factura, fatura_sucursal, YEAR(factura_fecha), MONTH(factura_fecha), factura_precio_facturado, factura_cantidad_facturada
+		FROM FSCOCIETY.Factura
+
 	--Modelo
 	create table FSOCIETY.BI_modelo(
 		modelo_codigo decimal(18,0),
@@ -278,7 +294,7 @@ go
 	go
 
 	alter table FSOCIETY.BI_Venta_Automoviles add constraint FK_venta_am_sucursal	foreign key (venta_am_sucursal)		references FSOCIETY.BI_sucursal(sucursal_id)
-	alter table FSOCIETY.BI_Venta_Automoviles add constraint FK_venta_am_venta		foreign key (venta_am_venta)		references FSOCIETY.BI_venta_automovil(venta_auto_id)
+	alter table FSOCIETY.BI_Venta_Automoviles add constraint FK_venta_am_venta		foreign key (venta_am_venta)		references FSOCIETY.BI_factura(factura_nro_factura)
 	go
 
 	create table FSOCIETY.BI_Compra_Autopartes(
@@ -293,7 +309,7 @@ go
         venta_ap_venta int primary key,
         venta_ap_sucursal decimal(18,0)
     )
-    alter table FSOCIETY.BI_Venta_Autopartes ADD CONSTRAINT FK_venta_ap_venta FOREIGN KEY (venta_ap_venta) REFERENCES FSOCIETY.BI_Factura(factura_id)
+    alter table FSOCIETY.BI_Venta_Autopartes ADD CONSTRAINT FK_venta_ap_venta FOREIGN KEY (venta_ap_venta) REFERENCES FSOCIETY.BI_Factura(factura_nro_factura)
     alter table FSOCIETY.BI_Venta_Autopartes ADD CONSTRAINT FK_venta_ap_sucursal FOREIGN KEY (venta_ap_sucursal) REFERENCES FSOCIETY.BI_sucursal(sucursal_id)
     go
 
@@ -308,3 +324,9 @@ go
 select count(ca.compra_auto_id), ca.compra_auto_mes from FSOCIETY.BI_compra_automovil ca
 	join FSOCIETY.BI_compra c on ca.compra_auto_compra_nro = c.compra_nro
 	join FSOCIETY.BI_sucursal s on s.sucursal_id = c.compra_sucursal
+
+
+--------------------------------------------------------------------------------------
+-- Precio promedio de automóviles, vendidos y comprados.
+
+
