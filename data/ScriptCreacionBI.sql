@@ -177,7 +177,7 @@ go
 	Tiempo						-> Lo saco de las compras de las autopartes
 	Sucursal					-> Listo
 	Autoparte					-> Listo
-	Rubro Autoparte				-> Listo la creacion de la dimension, falta el llenado
+	Rubro Autoparte				-> Listo
 	Fabricante					-> Listo
 */
 
@@ -241,18 +241,22 @@ go
 
 	create table FSOCIETY.BI_Compra_Automoviles(
 		compra_am_sucursal decimal(18,0) primary key,
-
+		compra_compra decimal(18,0),
+		compra_am_compra int
 	)
 	go
 	create table FSOCIETY.BI_Venta_Automoviles(
-		--TODO:
+		venta_am_sucursal decimal(18,0) primary key,
+		venta_am_venta int
 	)
 	go
 	create table FSOCIETY.BI_Compra_Autopartes(
-		--TODO:
+		compra_ap_compra int primary key,
+		compra_ap_sucursal decimal(18,0)
 	)
 	go
 	create table FSOCIETY.BI_Venta_Autopartes(
-		--TODO:
+		venta_ap_venta int primary key,
+		venta_ap_sucursal decimal(18,0)
 	)
 	go
