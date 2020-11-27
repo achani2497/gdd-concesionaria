@@ -112,7 +112,39 @@ go
 
 	--Potencia
 
+	create table FSOCIETY.BI_compra(
+		compra_nro decimal(18,0) primary key,
+		compra_sucursal int,
+		compra_cliente_id int,
+		compra_tipo_compra nchar(2),
+		compra_fecha datetime2(3),
+		compra_precio_total decimal(18,2)
+	)
+	go
+	--Compra Automovil
+	create table FSOCIETY.BI_compra_automovil(
+		compra_auto_id int identity(1,1) primary key,
+		compra_auto_compra_nro decimal(18,0),
+		compra_auto_automovil_id int
+	)
+	go
+		--Fill
+		insert into FSOCIETY.BI_compra_automovil
+		select * from FSOCIETY.Compra_Auto
+		go
 
+	--Venta Automovil
+	create table FSOCIETY.BI_venta_automovil(
+		venta_auto_id int primary key,
+		venta_auto_auto_id int,
+		venta_auto_precio_sin_iva decimal(18,2),
+		venta_auto_precio_con_iva decimal(18,2)
+	)
+	go
+		--Fill
+		insert into FSOCIETY.BI_venta_automovil
+		select * from FSOCIETY.Venta_Auto
+		go
 /*
 	drop table FSOCIETY.BI_cliente
 	drop table FSOCIETY.BI_fabricante_auto
@@ -122,6 +154,9 @@ go
 	drop table FSOCIETY.BI_tipo_de_caja
 	drop table FSOCIETY.BI_tipo_de_motor
 	drop table FSOCIETY.BI_tipo_de_transmision
+	drop table FSOCIETY.BI_compra
+	drop table FSOCIETY.BI_compra_automovil
+	drop table FSOCIETY.BI_venta_automovil
 */
 
 --dimensiones para compra / venta de automoviles:
@@ -159,26 +194,54 @@ go
 
 	--Rubro Autoparte
 	create table FSOCIETY.BI_rubro_autoparte(
-		rubro_codigo int identity primary key,
+		rubro_codigo int identity(1,1) primary key,
 		rubro_descripcion nvarchar(50)
 	)
 	go
-		--Fill TODO: Fix me
+		--Fill
 		insert into FSOCIETY.BI_rubro_autoparte
 		select a.autoparte_rubro from FSOCIETY.Auto_Parte a
 		go
 
-		select * from FSOCIETY.BI_rubro_autoparte
+	--Compra Autoparte
+	create table FSOCIETY.BI_compra_autoparte(
+		compra_autoparte_id int primary key,
+		compra_autoparte_compra_id decimal(18,0),
+		compra_autoparte_autoparte_id decimal(18,0),
+		compra_autoparte_precio_unitario decimal(18,2),
+		compra_autoparte_cantidad int
+	)
+	go
+		--Fill
+		insert into FSOCIETY.BI_compra_autoparte
+		select * from FSOCIETY.Compra_Autoparte
+		go
+
+	create table FSOCIETY.BI_venta_autoparte(
+		venta_autoparte_id int primary key,
+		venta_autoparte_venta_id int,
+		venta_autoparte_autoparteid decimal(18,0),
+		venta_autoparte_cantidad int,
+		venta_autoparte_precio_unitario decimal(18,2),
+		venta_autoparte_fecha datetime2(3)
+	)
+	go
+		--Fill
+		insert into FSOCIETY.BI_venta_autoparte
+		select * from FSOCIETY.Venta_Autoparte
 
 /*
 	drop table FSOCIETY.BI_autoparte
 	drop table FSOCIETY.BI_rubro_autoparte
+	drop table FSOCIETY.BI_compra_autoparte
+	drop table FSOCIETY.BI_venta_autoparte
 */
 
 /* -- Creacion de Tablas de Hechos -- */
 
 	create table FSOCIETY.BI_Compra_Automoviles(
-		--TODO:
+		compra_am_sucursal decimal(18,0) primary key,
+
 	)
 	go
 	create table FSOCIETY.BI_Venta_Automoviles(
