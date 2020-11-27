@@ -105,8 +105,7 @@ alter table FSOCIETY.Automovil add constraint FK_auto_fabricante foreign key (au
 go
 
 create table FSOCIETY.Factura(
-	factura_id					     int identity (1,1) primary key,
-	factura_nro_factura				 decimal (18),
+	factura_nro_factura				 decimal (18) primary key,
 	factura_sucursal_id				 int,
 	factura_fecha					 datetime2 (3),
 	factura_cliente_id				 int,
@@ -122,19 +121,19 @@ go
 create table FSOCIETY.Venta_Auto(
 	venta_auto_id					 int identity (1,1) primary key,
 	venta_auto_auto_id				 int,
-	venta_auto_venta_id				 int,
+	venta_auto_factura_nro			 decimal (18,0),
 	venta_auto_precio_sin_iva		 decimal (18,2),
 	venta_auto_precio_con_iva		 decimal (18,2)
 )
 go
 
-alter table FSOCIETY.Venta_Auto add constraint FK_venta_auto_auto foreign key (venta_auto_auto_id) references FSOCIETY.Automovil(auto_id)
-alter table FSOCIETY.Venta_Auto add constraint FK_venta_am_venta_id  foreign key (venta_auto_venta_id) references FSOCIETY.Factura(factura_id)
+alter table FSOCIETY.Venta_Auto add constraint FK_venta_auto_auto		  foreign key (venta_auto_auto_id)	references FSOCIETY.Automovil(auto_id)
+alter table FSOCIETY.Venta_Auto add constraint FK_venta_auto_factura_nro  foreign key (venta_auto_factura_nro) references FSOCIETY.Factura(factura_nro_factura)
 go
 
 create table FSOCIETY.Venta_Autoparte(
 	venta_autoparte_id				 int identity (1,1) primary key,
-	venta_autoparte_venta_id		 int,
+	venta_autoparte_factura_nro		 decimal (18,0),
 	venta_autoparte_autoparte_id	 decimal (18,0),
 	venta_autoparte_cantidad		 int,
 	venta_autoparte_precio_unitario  decimal (18,2),
@@ -142,8 +141,8 @@ create table FSOCIETY.Venta_Autoparte(
 )
 go
 
-alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_autoparte foreign key (venta_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
-alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_ap_venta_id foreign key (venta_autoparte_venta_id) references FSOCIETY.Factura(factura_id)
+alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_autoparte   foreign key (venta_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
+alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_factura_nro foreign key (venta_autoparte_factura_nro) references FSOCIETY.Factura(factura_nro_factura)
 
 go
 
@@ -325,12 +324,12 @@ begin
 		join FSOCIETY.Sucursal s on s.sucursal_ciudad = gdm.fac_sucursal_ciudad and s.sucursal_telefono = gdm.fac_sucursal_telefono
 		join FSOCIETY.Cliente c on c.cliente_apellido = gdm.fac_cliente_apellido and c.cliente_nombre = gdm.fac_cliente_nombre and c.cliente_dni = gdm.fac_cliente_dni
 	where factura_nro is not null and cant_facturada is null
-	union
-	select distinct factura_nro, factura_fecha, sum(precio_facturado) precio_facturado, cant_facturada, sucursal_id, cliente_id from gd_esquema.Maestra gdm
+	union all
+	select distinct factura_nro, factura_fecha, sum(precio_facturado) as precio_facturado_total, sum(cant_facturada), sucursal_id, cliente_id from gd_esquema.Maestra gdm
 		join FSOCIETY.Sucursal s on s.sucursal_ciudad = gdm.fac_sucursal_ciudad and s.sucursal_telefono = gdm.fac_sucursal_telefono
 		join FSOCIETY.Cliente c on c.cliente_apellido = gdm.fac_cliente_apellido and c.cliente_nombre = gdm.fac_cliente_nombre and c.cliente_dni = gdm.fac_cliente_dni
 	where factura_nro is not null and cant_facturada is not null
-	group by factura_nro, factura_fecha, cant_facturada, cliente_id, sucursal_id
+	group by factura_nro, factura_fecha, cliente_id, sucursal_id
 end
 go
 
@@ -342,10 +341,18 @@ begin
 	from gd_esquema.Maestra m
 		join FSOCIETY.Auto_Parte ap on ap.autoparte_codigo = m.AUTO_PARTE_CODIGO
 		join FSOCIETY.Factura f on f.factura_nro_factura = m.factura_nro
-	where m.cant_facturada is not null and m.compra_nro is null
+	where m.cant_facturada is not null and m.compra_nro is null and m.auto_nro_chasis is null
 	group by f.factura_id, ap.autoparte_codigo, m.cant_facturada, m.precio_facturado, m.factura_fecha
 end
 go
+
+-- ESTO ESTA BIEN
+select distinct m.FACTURA_NRO, a.autoparte_codigo, m.CANT_FACTURADA, FSOCIETY.FX_precio_unitario_autoparte(m.CANT_FACTURADA, m.PRECIO_FACTURADO) as precio_unitario, m.FACTURA_FECHA 
+from gd_esquema.Maestra m
+	join FSOCIETY.Factura f on f.factura_nro_factura = m.FACTURA_NRO
+	join FSOCIETY.Auto_Parte a on a.autoparte_codigo = m.AUTO_PARTE_CODIGO
+group by m.FACTURA_NRO, a.autoparte_codigo, m.CANT_FACTURADA, m.PRECIO_FACTURADO, m.FACTURA_FECHA
+order by m.FACTURA_NRO
 
 create procedure FSOCIETY.PR_fill_modelo_table
 as
