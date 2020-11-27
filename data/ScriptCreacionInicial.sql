@@ -143,7 +143,6 @@ go
 
 alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_autoparte   foreign key (venta_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
 alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_factura_nro foreign key (venta_autoparte_factura_nro) references FSOCIETY.Factura(factura_nro_factura)
-
 go
 
 create table FSOCIETY.Compra(
@@ -336,23 +335,16 @@ go
 create procedure FSOCIETY.PR_fill_venta_autoparte_table
 as
 begin
-	insert FSOCIETY.Venta_Autoparte (venta_autoparte_venta_id, venta_autoparte_autoparte_id, venta_autoparte_cantidad, venta_autoparte_precio_unitario, venta_autoparte_fecha)
-	select distinct f.factura_id, ap.autoparte_codigo, m.cant_facturada, FSOCIETY.FX_precio_unitario_autoparte(m.cant_facturada, m.precio_facturado) as precio_unitario, m.factura_fecha 
+	insert into FSOCIETY.Venta_Autoparte (venta_autoparte_factura_nro, venta_autoparte_autoparte_id, venta_autoparte_cantidad, venta_autoparte_precio_unitario, venta_autoparte_fecha)
+	select distinct m.FACTURA_NRO, a.autoparte_codigo, m.CANT_FACTURADA, FSOCIETY.FX_precio_unitario_autoparte(m.CANT_FACTURADA, m.PRECIO_FACTURADO) as precio_unitario, m.FACTURA_FECHA 
 	from gd_esquema.Maestra m
-		join FSOCIETY.Auto_Parte ap on ap.autoparte_codigo = m.AUTO_PARTE_CODIGO
-		join FSOCIETY.Factura f on f.factura_nro_factura = m.factura_nro
-	where m.cant_facturada is not null and m.compra_nro is null and m.auto_nro_chasis is null
-	group by f.factura_id, ap.autoparte_codigo, m.cant_facturada, m.precio_facturado, m.factura_fecha
+		join FSOCIETY.Factura f on f.factura_nro_factura = m.FACTURA_NRO
+		join FSOCIETY.Auto_Parte a on a.autoparte_codigo = m.AUTO_PARTE_CODIGO
+	where m.CANT_FACTURADA is not null and m.COMPRA_NRO is null and m.AUTO_NRO_CHASIS is null
+	group by m.FACTURA_NRO, a.autoparte_codigo, m.CANT_FACTURADA, m.PRECIO_FACTURADO, m.FACTURA_FECHA
+	order by m.FACTURA_NRO
 end
 go
-
--- ESTO ESTA BIEN
-select distinct m.FACTURA_NRO, a.autoparte_codigo, m.CANT_FACTURADA, FSOCIETY.FX_precio_unitario_autoparte(m.CANT_FACTURADA, m.PRECIO_FACTURADO) as precio_unitario, m.FACTURA_FECHA 
-from gd_esquema.Maestra m
-	join FSOCIETY.Factura f on f.factura_nro_factura = m.FACTURA_NRO
-	join FSOCIETY.Auto_Parte a on a.autoparte_codigo = m.AUTO_PARTE_CODIGO
-group by m.FACTURA_NRO, a.autoparte_codigo, m.CANT_FACTURADA, m.PRECIO_FACTURADO, m.FACTURA_FECHA
-order by m.FACTURA_NRO
 
 create procedure FSOCIETY.PR_fill_modelo_table
 as
@@ -410,15 +402,14 @@ create procedure FSOCIETY.PR_fill_venta_auto_table
 as
 begin
 
-	insert into FSOCIETY.Venta_Auto (venta_auto_auto_id, venta_auto_precio_sin_iva, venta_auto_precio_con_iva, venta_auto_venta_id)
-	select distinct a.auto_id, m.Compra_precio as precio_compra, FSOCIETY.FX_portentaje_adicional_auto(m.compra_precio) as precio_venta, f.factura_id from gd_esquema.Maestra m 
-	join FSOCIETY.Automovil a on a.auto_nro_chasis = m.auto_nro_chasis
-	join FSOCIETY.Factura f on f.factura_nro_factura = m.factura_nro
+	insert into FSOCIETY.Venta_Auto (venta_auto_auto_id, venta_auto_precio_sin_iva, venta_auto_precio_con_iva, venta_auto_factura_nro)
+	select distinct a.auto_id, m.Compra_precio as precio_compra, FSOCIETY.FX_portentaje_adicional_auto(m.compra_precio) as precio_venta, f.factura_nro_factura from gd_esquema.Maestra m 
+		join FSOCIETY.Automovil a on a.auto_nro_chasis = m.auto_nro_chasis
+		join FSOCIETY.Factura f on f.factura_nro_factura = m.factura_nro
 	where m.cant_facturada is null and m.auto_nro_chasis is not null and m.factura_nro is not null
 
 end
 go
-
 
 create procedure FSOCIETY.PR_fill_compra_auto_table
 as
