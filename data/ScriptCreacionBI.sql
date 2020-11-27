@@ -117,15 +117,19 @@ go
 		compra_sucursal int,
 		compra_cliente_id int,
 		compra_tipo_compra nchar(2),
-		compra_fecha datetime2(3),
 		compra_precio_total decimal(18,2),
 		compra_mes int,
 		compra_anio int
 	)
 	go
+		--Fill
+		insert into FSOCIETY.BI_compra
+		select c.compra_nro, c.compra_sucursal_id, c.compra_cliente_id, c.compra_tipo_compra, c.compra_precio_total, MONTH(c.compra_fecha), YEAR(c.compra_fecha) 
+		from FSOCIETY.Compra c
+
 	--Compra Automovil
 	create table FSOCIETY.BI_compra_automovil(
-		compra_auto_id int identity(1,1) primary key,
+		compra_auto_id int primary key,
 		compra_auto_compra_nro decimal(18,0),
 		compra_auto_automovil_id int,
 		compra_auto_mes int,
@@ -134,7 +138,8 @@ go
 	go
 		--Fill
 		insert into FSOCIETY.BI_compra_automovil
-		select * from FSOCIETY.Compra_Auto
+		select ca.compra_auto_id, ca.compra_auto_compra_nro, ca.compra_auto_id, MONTH(c.compra_fecha), YEAR(c.compra_fecha) from FSOCIETY.Compra_Auto ca
+			join FSOCIETY.Compra c on c.compra_nro = ca.compra_auto_compra_nro
 		go
 
 	--Venta Automovil
@@ -149,7 +154,8 @@ go
 	go
 		--Fill
 		insert into FSOCIETY.BI_venta_automovil
-		select * from FSOCIETY.Venta_Auto
+		select va.venta_auto_id, va.venta_auto_auto_id, va.venta_auto_precio_sin_iva, va.venta_auto_precio_con_iva, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Auto va
+			join FSOCIETY.Factura f on f.factura_id = va.venta_auto_venta_id
 		go
 /*
 	drop table FSOCIETY.BI_cliente
@@ -222,13 +228,14 @@ go
 	go
 		--Fill
 		insert into FSOCIETY.BI_compra_autoparte
-		select * from FSOCIETY.Compra_Autoparte
+		select ca.compra_autoparte_id, ca.compra_autoparte_compra_id, ca.compra_autoparte_autoparte_id, ca.compra_autoparte_precio_unitario, ca.compra_autoparte_cantidad, MONTH(c.compra_fecha), YEAR(c.compra_fecha) from FSOCIETY.Compra_Autoparte ca
+			join FSOCIETY.Compra c on c.compra_nro = ca.compra_autoparte_compra_id
 		go
 
 	create table FSOCIETY.BI_venta_autoparte(
 		venta_autoparte_id int primary key,
 		venta_autoparte_venta_id int,
-		venta_autoparte_autoparteid decimal(18,0),
+		venta_autoparte_autoparte_id decimal(18,0),
 		venta_autoparte_cantidad int,
 		venta_autoparte_precio_unitario decimal(18,2),
 		venta_autoparte_mes int,
@@ -237,6 +244,10 @@ go
 	go
 		--Fill
 		insert into FSOCIETY.BI_venta_autoparte
+		select va.venta_autoparte_id, va.venta_autoparte_venta_id, va.venta_autoparte_autoparte_id, va.venta_autoparte_cantidad, va.venta_autoparte_precio_unitario, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Autoparte va
+			join FSOCIETY.Factura f on f.factura_id = va.venta_autoparte_venta_id
+		go
+
 		select * from FSOCIETY.Venta_Autoparte
 
 /*
@@ -258,6 +269,7 @@ go
 	alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_am_sucursal	foreign key (compra_am_sucursal) references FSOCIETY.BI_sucursal(sucursal_id)
 	alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_compra		foreign key (compra_compra)		 references FSOCIETY.BI_compra(compra_nro)
 	alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_am_compra	foreign key (compra_am_compra)	 references FSOCIETY.BI_compra_automovil(compra_auto_id)
+	go
 
 	create table FSOCIETY.BI_Venta_Automoviles(
 		venta_am_sucursal decimal(18,0) primary key,
@@ -267,17 +279,23 @@ go
 
 	alter table FSOCIETY.BI_Venta_Automoviles add constraint FK_venta_am_sucursal	foreign key (venta_am_sucursal)		references FSOCIETY.BI_sucursal(sucursal_id)
 	alter table FSOCIETY.BI_Venta_Automoviles add constraint FK_venta_am_venta		foreign key (venta_am_venta)		references FSOCIETY.BI_venta_automovil(venta_auto_id)
+	go
 
 	create table FSOCIETY.BI_Compra_Autopartes(
-		compra_ap_compra int primary key,
-		compra_ap_sucursal decimal(18,0)
-	)
-	go
-	create table FSOCIETY.BI_Venta_Autopartes(
-		venta_ap_venta int primary key,
-		venta_ap_sucursal decimal(18,0)
-	)
-	go
+        compra_ap_compra int primary key,
+        compra_ap_sucursal decimal(18,0)
+    )
+    alter table FSOCIETY.BI_Compra_Autopartes ADD CONSTRAINT FK_compra_ap_compra FOREIGN KEY (compra_ap_compra) REFERENCES FSOCIETY.BI_compra(compra_nro)
+    alter table FSOCIETY.BI_Compra_Autopartes ADD CONSTRAINT FK_compra_ap_sucursal FOREIGN KEY (compra_ap_sucursal) REFERENCES FSOCIETY.BI_sucursal(sucursal_id)
+    go
+
+    create table FSOCIETY.BI_Venta_Autopartes(
+        venta_ap_venta int primary key,
+        venta_ap_sucursal decimal(18,0)
+    )
+    alter table FSOCIETY.BI_Venta_Autopartes ADD CONSTRAINT FK_venta_ap_venta FOREIGN KEY (venta_ap_venta) REFERENCES FSOCIETY.BI_Factura(factura_id)
+    alter table FSOCIETY.BI_Venta_Autopartes ADD CONSTRAINT FK_venta_ap_sucursal FOREIGN KEY (venta_ap_sucursal) REFERENCES FSOCIETY.BI_sucursal(sucursal_id)
+    go
 
 
 
@@ -287,4 +305,6 @@ go
 /* REQUERIMIENTOS FUNCIONALES */
 --Cantidad de automóviles, vendidos y comprados x sucursal y mes
 
-select * from FSOCIETY
+select count(ca.compra_auto_id), ca.compra_auto_mes from FSOCIETY.BI_compra_automovil ca
+	join FSOCIETY.BI_compra c on ca.compra_auto_compra_nro = c.compra_nro
+	join FSOCIETY.BI_sucursal s on s.sucursal_id = c.compra_sucursal

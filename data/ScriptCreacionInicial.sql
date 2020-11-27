@@ -129,6 +129,7 @@ create table FSOCIETY.Venta_Auto(
 go
 
 alter table FSOCIETY.Venta_Auto add constraint FK_venta_auto_auto foreign key (venta_auto_auto_id) references FSOCIETY.Automovil(auto_id)
+alter table FSOCIETY.Venta_Auto add constraint FK_venta_am_venta_id  foreign key (venta_auto_venta_id) references FSOCIETY.Factura(factura_id)
 go
 
 create table FSOCIETY.Venta_Autoparte(
@@ -142,6 +143,8 @@ create table FSOCIETY.Venta_Autoparte(
 go
 
 alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_autoparte_autoparte foreign key (venta_autoparte_autoparte_id) references FSOCIETY.Auto_Parte(autoparte_codigo)
+alter table FSOCIETY.Venta_Autoparte add constraint FK_venta_ap_venta_id foreign key (venta_autoparte_venta_id) references FSOCIETY.Factura(factura_id)
+
 go
 
 create table FSOCIETY.Compra(
@@ -334,12 +337,13 @@ go
 create procedure FSOCIETY.PR_fill_venta_autoparte_table
 as
 begin
-	insert FSOCIETY.Venta_Autoparte (venta_autoparte_autoparte_id, venta_autoparte_cantidad, venta_autoparte_precio_unitario, venta_autoparte_fecha)
-	select distinct ap.autoparte_codigo, m.cant_facturada, FSOCIETY.FX_precio_unitario_autoparte(m.cant_facturada, m.precio_facturado) as precio_unitario, m.factura_fecha 
+	insert FSOCIETY.Venta_Autoparte (venta_autoparte_venta_id, venta_autoparte_autoparte_id, venta_autoparte_cantidad, venta_autoparte_precio_unitario, venta_autoparte_fecha)
+	select distinct f.factura_id, ap.autoparte_codigo, m.cant_facturada, FSOCIETY.FX_precio_unitario_autoparte(m.cant_facturada, m.precio_facturado) as precio_unitario, m.factura_fecha 
 	from gd_esquema.Maestra m
-	join FSOCIETY.Auto_Parte ap on ap.autoparte_codigo = m.AUTO_PARTE_CODIGO
+		join FSOCIETY.Auto_Parte ap on ap.autoparte_codigo = m.AUTO_PARTE_CODIGO
+		join FSOCIETY.Factura f on f.factura_nro_factura = m.factura_nro
 	where m.cant_facturada is not null and m.compra_nro is null
-	group by ap.autoparte_codigo, m.cant_facturada, m.precio_facturado, m.factura_fecha
+	group by f.factura_id, ap.autoparte_codigo, m.cant_facturada, m.precio_facturado, m.factura_fecha
 end
 go
 
