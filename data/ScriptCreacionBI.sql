@@ -56,8 +56,8 @@ go
 	GO
 		--Fill
 		INSERT INTO FSOCIETY.BI_factura
-		SELECT factura_nro_factura, fatura_sucursal, YEAR(factura_fecha), MONTH(factura_fecha), factura_precio_facturado, factura_cantidad_facturada
-		FROM FSCOCIETY.Factura
+		SELECT factura_nro_factura, factura_sucursal_id, YEAR(factura_fecha), MONTH(factura_fecha), factura_precio_facturado, factura_cantidad_facturada
+		FROM FSOCIETY.Factura
 
 	--Modelo
 	create table FSOCIETY.BI_modelo(
@@ -160,7 +160,7 @@ go
 
 	--Venta Automovil
 	create table FSOCIETY.BI_venta_automovil(
-		venta_auto_id int primary key,
+		venta_auto_nro_factura decimal(18,0) primary key,
 		venta_auto_auto_id int,
 		venta_auto_precio_sin_iva decimal(18,2),
 		venta_auto_precio_con_iva decimal(18,2),
@@ -171,13 +171,14 @@ go
 		--Fill
 		insert into FSOCIETY.BI_venta_automovil
 		select va.venta_auto_id, va.venta_auto_auto_id, va.venta_auto_precio_sin_iva, va.venta_auto_precio_con_iva, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Auto va
-			join FSOCIETY.Factura f on f.factura_id = va.venta_auto_venta_id
+			join FSOCIETY.Factura f on f.factura_nro_factura = va.venta_auto_factura_nro
 		go
 /*
 	drop table FSOCIETY.BI_cliente
 	drop table FSOCIETY.BI_fabricante_auto
 	drop table FSOCIETY.BI_modelo
 	drop table FSOCIETY.BI_sucursal
+	drop table FSOCIETY.BI_factura
 	drop table FSOCIETY.BI_tipo_de_automovil
 	drop table FSOCIETY.BI_tipo_de_caja
 	drop table FSOCIETY.BI_tipo_de_motor
@@ -248,9 +249,10 @@ go
 			join FSOCIETY.Compra c on c.compra_nro = ca.compra_autoparte_compra_id
 		go
 
+	--Venta Autoparte
 	create table FSOCIETY.BI_venta_autoparte(
-		venta_autoparte_id int primary key,
-		venta_autoparte_venta_id int,
+		venta_autoparte_id int identity(1,1) primary key,
+		venta_autoparte_factura_nro decimal(18,0),
 		venta_autoparte_autoparte_id decimal(18,0),
 		venta_autoparte_cantidad int,
 		venta_autoparte_precio_unitario decimal(18,2),
@@ -260,11 +262,9 @@ go
 	go
 		--Fill
 		insert into FSOCIETY.BI_venta_autoparte
-		select va.venta_autoparte_id, va.venta_autoparte_venta_id, va.venta_autoparte_autoparte_id, va.venta_autoparte_cantidad, va.venta_autoparte_precio_unitario, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Autoparte va
-			join FSOCIETY.Factura f on f.factura_id = va.venta_autoparte_venta_id
+		select va.venta_autoparte_factura_nro, va.venta_autoparte_autoparte_id, va.venta_autoparte_cantidad, va.venta_autoparte_precio_unitario, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Autoparte va
+			join FSOCIETY.Factura f on f.factura_nro_factura = va.venta_autoparte_factura_nro
 		go
-
-		select * from FSOCIETY.Venta_Autoparte
 
 /*
 	drop table FSOCIETY.BI_autoparte
