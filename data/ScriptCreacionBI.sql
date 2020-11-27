@@ -118,14 +118,18 @@ go
 		compra_cliente_id int,
 		compra_tipo_compra nchar(2),
 		compra_fecha datetime2(3),
-		compra_precio_total decimal(18,2)
+		compra_precio_total decimal(18,2),
+		compra_mes int,
+		compra_anio int
 	)
 	go
 	--Compra Automovil
 	create table FSOCIETY.BI_compra_automovil(
 		compra_auto_id int identity(1,1) primary key,
 		compra_auto_compra_nro decimal(18,0),
-		compra_auto_automovil_id int
+		compra_auto_automovil_id int,
+		compra_auto_mes int,
+		compra_auto_anio int,
 	)
 	go
 		--Fill
@@ -138,7 +142,9 @@ go
 		venta_auto_id int primary key,
 		venta_auto_auto_id int,
 		venta_auto_precio_sin_iva decimal(18,2),
-		venta_auto_precio_con_iva decimal(18,2)
+		venta_auto_precio_con_iva decimal(18,2),
+		venta_auto_mes int,
+		venta_auto_anio int
 	)
 	go
 		--Fill
@@ -209,7 +215,9 @@ go
 		compra_autoparte_compra_id decimal(18,0),
 		compra_autoparte_autoparte_id decimal(18,0),
 		compra_autoparte_precio_unitario decimal(18,2),
-		compra_autoparte_cantidad int
+		compra_autoparte_cantidad int,
+		compra_autoparte_mes int,
+		compra_autoparte_anio int
 	)
 	go
 		--Fill
@@ -223,7 +231,8 @@ go
 		venta_autoparte_autoparteid decimal(18,0),
 		venta_autoparte_cantidad int,
 		venta_autoparte_precio_unitario decimal(18,2),
-		venta_autoparte_fecha datetime2(3)
+		venta_autoparte_mes int,
+		venta_autoparte_anio int
 	)
 	go
 		--Fill
@@ -237,7 +246,7 @@ go
 	drop table FSOCIETY.BI_venta_autoparte
 */
 
-/* -- Creacion de Tablas de Hechos -- */
+/* -- CREACION DE TABLAS DE HECHOS -- */
 
 	create table FSOCIETY.BI_Compra_Automoviles(
 		compra_am_sucursal decimal(18,0) primary key,
@@ -245,11 +254,20 @@ go
 		compra_am_compra int
 	)
 	go
+
+	alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_am_sucursal	foreign key (compra_am_sucursal) references FSOCIETY.BI_sucursal(sucursal_id)
+	alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_compra		foreign key (compra_compra)		 references FSOCIETY.BI_compra(compra_nro)
+	alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_am_compra	foreign key (compra_am_compra)	 references FSOCIETY.BI_compra_automovil(compra_auto_id)
+
 	create table FSOCIETY.BI_Venta_Automoviles(
 		venta_am_sucursal decimal(18,0) primary key,
 		venta_am_venta int
 	)
 	go
+
+	alter table FSOCIETY.BI_Venta_Automoviles add constraint FK_venta_am_sucursal	foreign key (venta_am_sucursal)		references FSOCIETY.BI_sucursal(sucursal_id)
+	alter table FSOCIETY.BI_Venta_Automoviles add constraint FK_venta_am_venta		foreign key (venta_am_venta)		references FSOCIETY.BI_venta_automovil(venta_auto_id)
+
 	create table FSOCIETY.BI_Compra_Autopartes(
 		compra_ap_compra int primary key,
 		compra_ap_sucursal decimal(18,0)
@@ -260,3 +278,13 @@ go
 		venta_ap_sucursal decimal(18,0)
 	)
 	go
+
+
+
+
+
+
+/* REQUERIMIENTOS FUNCIONALES */
+--Cantidad de automóviles, vendidos y comprados x sucursal y mes
+
+select * from FSOCIETY
