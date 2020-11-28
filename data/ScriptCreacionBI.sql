@@ -147,8 +147,7 @@ go
 
 	--Compra Automovil
 	create table FSOCIETY.BI_compra_automovil(
-		compra_auto_id int primary key,
-		compra_auto_compra_nro decimal(18,0),
+		compra_auto_compra_nro decimal(18,0) primary key,
 		compra_auto_automovil_id int,
 		compra_auto_mes int,
 		compra_auto_anio int,
@@ -156,7 +155,7 @@ go
 	go
 		--Fill
 		insert into FSOCIETY.BI_compra_automovil
-		select ca.compra_auto_auto_id, ca.compra_auto_compra_nro, ca.compra_auto_id, c.compra_mes, c.compra_anio 
+		select ca.compra_auto_compra_nro, ca.compra_auto_id, c.compra_mes, c.compra_anio 
 		from FSOCIETY.Compra_Auto ca
 			join FSOCIETY.BI_compra c on c.compra_nro = ca.compra_auto_compra_nro
 		go
@@ -281,19 +280,19 @@ go
 	-- Hecho Compra Automovil
 	create table FSOCIETY.BI_Compra_Automoviles(
 		compra_am_sucursal int,
-		compra_am_compra int,
+		compra_am_compra decimal(18,0),
 		primary key(compra_am_sucursal, compra_am_compra)
 	)
 	go
 
 		--Constraints
 		alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_am_sucursal	foreign key (compra_am_sucursal) references FSOCIETY.BI_sucursal(sucursal_id)
-		alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_am_compra	foreign key (compra_am_compra)	 references FSOCIETY.BI_compra_automovil(compra_auto_id)
+		alter table FSOCIETY.BI_Compra_Automoviles add constraint FK_compra_am_compra	foreign key (compra_am_compra)	 references FSOCIETY.BI_compra_automovil(compra_auto_compra_nro)
 		go
 
 		--Fill
 		insert into FSOCIETY.BI_Compra_Automoviles
-		select c.compra_sucursal, ca.compra_auto_id from FSOCIETY.BI_compra c
+		select c.compra_sucursal, ca.compra_auto_compra_nro from FSOCIETY.BI_compra c
 			join FSOCIETY.BI_compra_automovil ca on c.compra_nro = ca.compra_auto_compra_nro
 		order by c.compra_sucursal
 		go
@@ -367,14 +366,26 @@ go
 
 
 /* REQUERIMIENTOS FUNCIONALES */
---Cantidad de automóviles, vendidos y comprados x sucursal y mes
+-- ****************** Cantidad de automóviles, vendidos y comprados x sucursal y mes ******************
 
-select ca.compra_auto_mes, count(ca.compra_auto_id)  from FSOCIETY.BI_compra_automovil ca
-	join FSOCIETY.BI_compra c on ca.compra_auto_compra_nro = c.compra_nro
-	join FSOCIETY.BI_sucursal s on s.sucursal_id = c.compra_sucursal
-group by ca.compra_auto_mes
+	--cant automoviles comprados x sucursal x mes x anio
+	select count(distinct ca.compra_am_compra) as autos_comprados, s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio 
+	into #compras_sucursal_mes
+	from FSOCIETY.BI_Compra_Automoviles ca
+		join FSOCIETY.BI_compra_automovil ca1 on ca.compra_am_compra = ca1.compra_auto_compra_nro
+		join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_am_sucursal
+	group by s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio
+	order by 2, 3
 
---------------------------------------------------------------------------------------
--- Precio promedio de automóviles, vendidos y comprados.
+	--cant automoviles vendidos x sucursal x mes x anio
+	select count(distinct va.venta_am_venta) as autos_vendidos, s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
+	into #ventas_sucursal_mes
+	from FSOCIETY.BI_Venta_Automoviles va
+		join FSOCIETY.BI_venta_automovil va1 on va1.venta_auto_nro_factura = va.venta_am_venta
+		join FSOCIETY.BI_sucursal s on va.venta_am_sucursal = s.sucursal_id
+	group by s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
+	order by 2, 3
+
+-- ****************** Precio promedio de automóviles, vendidos y comprados. ******************
 
 
