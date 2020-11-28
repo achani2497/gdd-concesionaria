@@ -43,7 +43,6 @@ go
 		select * from FSOCIETY.Sucursal
 		go
 
-
 	--Factura
 	CREATE TABLE FSOCIETY.BI_factura(
 		factura_nro_factura decimal(18,0) primary key,
@@ -127,8 +126,21 @@ go
 		select * from FSOCIETY.Tipo_Transmision
 		go
 
-	--Potencia
+	--Automovil
+	create table FSOCIETY.BI_automovil(
+		auto_id int primary key,
+		auto_modelo_codigo decimal(18, 0),
+		auto_nro_chasis nvarchar(50),
+		auto_nro_motor nvarchar(50),
+		auto_patente nvarchar(50)
+	)
+	go
+		--Fill
+		insert into FSOCIETY.BI_automovil
+		select a.auto_id, a.auto_modelo_codigo, a.auto_nro_chasis, a.auto_nro_motor, a.auto_patente from FSOCIETY.Automovil a
+		go
 
+	--Compra
 	create table FSOCIETY.BI_compra(
 		compra_nro decimal(18,0) primary key,
 		compra_sucursal int,
@@ -136,12 +148,13 @@ go
 		compra_tipo_compra nchar(2),
 		compra_precio_total decimal(18,2),
 		compra_mes int,
-		compra_anio int
+		compra_anio int,
+		compra_fecha datetime2(3)--Lo usamos para calcular el tiempo en stock de un modelo de automovil
 	)
 	go
 		--Fill
 		insert into FSOCIETY.BI_compra
-		select c.compra_nro, c.compra_sucursal_id, c.compra_cliente_id, c.compra_tipo_compra, c.compra_precio_total, MONTH(c.compra_fecha), YEAR(c.compra_fecha) 
+		select c.compra_nro, c.compra_sucursal_id, c.compra_cliente_id, c.compra_tipo_compra, c.compra_precio_total, MONTH(c.compra_fecha), YEAR(c.compra_fecha), c.compra_fecha 
 		from FSOCIETY.Compra c
 		go
 
@@ -151,11 +164,12 @@ go
 		compra_auto_automovil_id int,
 		compra_auto_mes int,
 		compra_auto_anio int,
+		compra_auto_fecha datetime2(3)--Lo usamos para calcular el tiempo en stock de un modelo de automovil
 	)
 	go
 		--Fill
 		insert into FSOCIETY.BI_compra_automovil
-		select ca.compra_auto_compra_nro, ca.compra_auto_id, c.compra_mes, c.compra_anio 
+		select ca.compra_auto_compra_nro, ca.compra_auto_id, c.compra_mes, c.compra_anio, c.compra_fecha
 		from FSOCIETY.Compra_Auto ca
 			join FSOCIETY.BI_compra c on c.compra_nro = ca.compra_auto_compra_nro
 		go
@@ -167,12 +181,14 @@ go
 		venta_auto_precio_sin_iva decimal(18,2),
 		venta_auto_precio_con_iva decimal(18,2),
 		venta_auto_mes int,
-		venta_auto_anio int
+		venta_auto_anio int,
+		venta_auto_fecha datetime2(3)
 	)
 	go
 		--Fill
 		insert into FSOCIETY.BI_venta_automovil
-		select va.venta_auto_factura_nro, va.venta_auto_auto_id, va.venta_auto_precio_sin_iva, va.venta_auto_precio_con_iva, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Auto va
+		select va.venta_auto_factura_nro, va.venta_auto_auto_id, va.venta_auto_precio_sin_iva, va.venta_auto_precio_con_iva, MONTH(f.factura_fecha), YEAR(f.factura_fecha), f.factura_fecha 
+		from FSOCIETY.Venta_Auto va
 			join FSOCIETY.Factura f on f.factura_nro_factura = va.venta_auto_factura_nro
 		go
 /*
@@ -188,28 +204,6 @@ go
 	drop table FSOCIETY.BI_compra
 	drop table FSOCIETY.BI_compra_automovil
 	drop table FSOCIETY.BI_venta_automovil
-*/
-
---dimensiones para compra / venta de automoviles:
-/*
-	Tiempo (año y mes)			-> Lo saco de las compras de autos
-	Sucursal					-> Listo
-	Modelo						-> Listo
-	Fabricante					-> Listo
-	Tipo de Automovil			-> Listo
-	Tipo caja de cambios		-> Listo
-	Tipo motor					-> Listo
-	Tipo transmision			-> Listo
-	Potencia					-> ? ? ?
-*/
-
---dimensiones para compra / venta de autopartes:
-/*
-	Tiempo						-> Lo saco de las compras de las autopartes
-	Sucursal					-> Listo
-	Autoparte					-> Listo
-	Rubro Autoparte				-> Listo
-	Fabricante					-> Listo
 */
 
 	--Autoparte
@@ -366,68 +360,81 @@ go
 
 
 /* REQUERIMIENTOS FUNCIONALES */
--- ****************** Cantidad de automóviles, vendidos y comprados x sucursal y mes ******************
+--	****************** Cantidad de automóviles, vendidos y comprados x sucursal y mes ******************
 
-	--cant automoviles comprados x sucursal x mes x anio
-	select count(distinct ca.compra_am_compra) as autos_comprados, s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio 
-	into #compras_sucursal_mes_anio
-	from FSOCIETY.BI_Compra_Automoviles ca
-		join FSOCIETY.BI_compra_automovil ca1 on ca.compra_am_compra = ca1.compra_auto_compra_nro
-		join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_am_sucursal
-	group by s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio
-	order by 2, 3
+		--cant automoviles comprados x sucursal x mes x anio
+		select count(distinct ca.compra_am_compra) as autos_comprados, s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio 
+		into #compras_sucursal_mes_anio
+		from FSOCIETY.BI_Compra_Automoviles ca
+			join FSOCIETY.BI_compra_automovil ca1 on ca.compra_am_compra = ca1.compra_auto_compra_nro
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_am_sucursal
+		group by s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio
+		order by 2, 3
 
-	--cant automoviles vendidos x sucursal x mes x anio
-	select count(distinct va.venta_am_venta) as autos_vendidos, s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
-	into #ventas_sucursal_mes_anio
-	from FSOCIETY.BI_Venta_Automoviles va
-		join FSOCIETY.BI_venta_automovil va1 on va1.venta_auto_nro_factura = va.venta_am_venta
-		join FSOCIETY.BI_sucursal s on va.venta_am_sucursal = s.sucursal_id
-	group by s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
-	order by 2, 3
+		--cant automoviles vendidos x sucursal x mes x anio
+		select count(distinct va.venta_am_venta) as autos_vendidos, s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
+		into #ventas_sucursal_mes_anio
+		from FSOCIETY.BI_Venta_Automoviles va
+			join FSOCIETY.BI_venta_automovil va1 on va1.venta_auto_nro_factura = va.venta_am_venta
+			join FSOCIETY.BI_sucursal s on va.venta_am_sucursal = s.sucursal_id
+		group by s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
+		order by 2, 3
 
-	--drop table #compras_sucursal_mes_anio
-	--drop table #ventas_sucursal_mes_anio
+		--drop table #compras_sucursal_mes_anio
+		--drop table #ventas_sucursal_mes_anio
 
--- ****************** Precio promedio de automóviles, vendidos y comprados. ******************
+--	****************** Precio promedio de automóviles, vendidos y comprados. ******************
 	
-	-- Precio promedio de autos comprados
-	select CAST(avg(c.compra_precio_total) as decimal(18,2)) as precio_promedio_compra 
-	into #precio_promedio_compra
-	from FSOCIETY.BI_Compra_Automoviles ca
-		join FSOCIETY.BI_compra c on c.compra_nro = ca.compra_am_compra
+		-- Precio promedio de autos comprados
+		select CAST(avg(c.compra_precio_total) as decimal(18,2)) as precio_promedio_compra 
+		into #precio_promedio_compra
+		from FSOCIETY.BI_Compra_Automoviles ca
+			join FSOCIETY.BI_compra c on c.compra_nro = ca.compra_am_compra
 
-	-- Precio promedio de autos vendidos
-	select CAST(avg(f.factura_precio_facturado) as decimal(18,2)) as precio_promedio_venta 
-	into #precio_promedio_venta
-	from FSOCIETY.BI_Venta_Automoviles va
-		join FSOCIETY.BI_factura f on f.factura_nro_factura = va.venta_am_venta
+		-- Precio promedio de autos vendidos
+		select CAST(avg(f.factura_precio_facturado) as decimal(18,2)) as precio_promedio_venta 
+		into #precio_promedio_venta
+		from FSOCIETY.BI_Venta_Automoviles va
+			join FSOCIETY.BI_factura f on f.factura_nro_factura = va.venta_am_venta
 
-	--drop table #precio_promedio_compra
-	--drop table #precio_promedio_venta
+		--drop table #precio_promedio_compra
+		--drop table #precio_promedio_venta
 
--- ****************** Ganancias x Mes x Sucursal. ******************
+	--	****************** Ganancias x Mes x Sucursal. ******************
 
-	-- Monto total de compras por sucursal x mes x anio
-	select sum(c.compra_precio_total) as total_mes, s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio 
-	into #total_compras_sucursal_mes_anio
-	from FSOCIETY.BI_compra c 
-		join FSOCIETY.BI_Compra_Automoviles ca on c.compra_nro = ca.compra_am_compra
-		join FSOCIETY.BI_compra_automovil ca1 on ca1.compra_auto_compra_nro = ca.compra_am_compra
-		join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_am_sucursal
-	group by s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio
-	order by 2, 3
+		-- Monto total de compras por sucursal x mes x anio
+		select sum(c.compra_precio_total) as total_mes, s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio 
+		into #total_compras_sucursal_mes_anio
+		from FSOCIETY.BI_compra c 
+			join FSOCIETY.BI_Compra_Automoviles ca on c.compra_nro = ca.compra_am_compra
+			join FSOCIETY.BI_compra_automovil ca1 on ca1.compra_auto_compra_nro = ca.compra_am_compra
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_am_sucursal
+		group by s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio
+		order by 2, 3
 
-	-- Monto total de ventas por sucursal x mes x anio
-	select sum(f.factura_precio_facturado) as total_mes, s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio 
-	into #total_ventas_sucursal_mes_anio
-	from FSOCIETY.Factura f
-		join FSOCIETY.BI_Venta_Automoviles va on va.venta_am_venta = f.factura_nro_factura
-		join FSOCIETY.BI_venta_automovil va1 on va1.venta_auto_nro_factura = va.venta_am_venta
-		join FSOCIETY.BI_sucursal s on s.sucursal_id = va.venta_am_sucursal
-	group by s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
-	order by 2, 3
+		-- Monto total de ventas por sucursal x mes x anio
+		select sum(f.factura_precio_facturado) as total_mes, s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio 
+		into #total_ventas_sucursal_mes_anio
+		from FSOCIETY.Factura f
+			join FSOCIETY.BI_Venta_Automoviles va on va.venta_am_venta = f.factura_nro_factura
+			join FSOCIETY.BI_venta_automovil va1 on va1.venta_auto_nro_factura = va.venta_am_venta
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = va.venta_am_sucursal
+		group by s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
+		order by 2, 3
 
-	select isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes, tv.venta_auto_anio from #total_compras_sucursal_mes_anio tc
-		right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
-	order by 2, 3
+		-- Muestra del calculo final
+		select isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes, tv.venta_auto_anio from #total_compras_sucursal_mes_anio tc
+			right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
+		order by 2, 3
+
+--	****************** Tiempo Promedio en Stock de cada modelo de automovil ******************
+	
+	select modelo_codigo, avg(DATEDIFF(dd, compra_fecha, venta_fecha)) as dias_promedio_stock from 
+	(select m.modelo_codigo, ca.compra_auto_fecha as compra_fecha, isnull(va.venta_auto_fecha, getdate()) venta_fecha from FSOCIETY.BI_compra_automovil ca
+		left join FSOCIETY.BI_venta_automovil va on va.venta_auto_auto_id = ca.compra_auto_automovil_id
+		left join FSOCIETY.BI_Compra_Automoviles ca1 on ca1.compra_am_compra = ca.compra_auto_compra_nro
+		left join FSOCIETY.BI_Venta_Automoviles va1 on va1.venta_am_venta = va.venta_auto_nro_factura
+		join FSOCIETY.BI_automovil am on am.auto_id = ca.compra_auto_automovil_id
+		join FSOCIETY.Modelo m on am.auto_modelo_codigo = m.modelo_codigo) modelo_fechas
+	group by modelo_codigo
+	order by modelo_codigo
