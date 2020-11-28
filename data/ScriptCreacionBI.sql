@@ -387,5 +387,14 @@ go
 	order by 2, 3
 
 -- ****************** Precio promedio de automóviles, vendidos y comprados. ******************
+	-- Precio promedio de autos vendidos
+	select CAST(avg(c.compra_precio_total) as decimal(18,2)) as precio_promedio_compra 
+	into #precio_promedio_compra
+	from FSOCIETY.BI_Compra_Automoviles ca
+		join FSOCIETY.BI_compra c on c.compra_nro = ca.compra_am_compra
 
+	select CAST(avg(f.factura_precio_facturado) as decimal(18,2)) as precio_promedio_venta 
+	into #precio_promedio_venta
+	from FSOCIETY.BI_Venta_Automoviles va
+		join FSOCIETY.BI_factura f on f.factura_nro_factura = va.venta_am_venta
 
