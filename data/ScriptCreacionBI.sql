@@ -359,7 +359,7 @@ go
 
 
 
-/* REQUERIMIENTOS FUNCIONALES */
+/* REQUERIMIENTOS FUNCIONALES SOBRE LOS AUTOS*/
 --	****************** Cantidad de automóviles, vendidos y comprados x sucursal y mes ******************
 
 		--cant automoviles comprados x sucursal x mes x anio
@@ -370,6 +370,7 @@ go
 			join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_am_sucursal
 		group by s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio
 		order by 2, 3
+		go
 
 		--cant automoviles vendidos x sucursal x mes x anio
 		select count(distinct va.venta_am_venta) as autos_vendidos, s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
@@ -379,7 +380,9 @@ go
 			join FSOCIETY.BI_sucursal s on va.venta_am_sucursal = s.sucursal_id
 		group by s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
 		order by 2, 3
+		go
 
+		--TODO: Falta hacer una vista que junte todos los resultados
 		--drop table #compras_sucursal_mes_anio
 		--drop table #ventas_sucursal_mes_anio
 
@@ -390,17 +393,20 @@ go
 		into #precio_promedio_compra
 		from FSOCIETY.BI_Compra_Automoviles ca
 			join FSOCIETY.BI_compra c on c.compra_nro = ca.compra_am_compra
+		go
 
 		-- Precio promedio de autos vendidos
 		select CAST(avg(f.factura_precio_facturado) as decimal(18,2)) as precio_promedio_venta 
 		into #precio_promedio_venta
 		from FSOCIETY.BI_Venta_Automoviles va
 			join FSOCIETY.BI_factura f on f.factura_nro_factura = va.venta_am_venta
+		go
 
+		-- TODO: Falta hacer una vista que junte todos los resultados
 		--drop table #precio_promedio_compra
 		--drop table #precio_promedio_venta
 
-	--	****************** Ganancias x Mes x Sucursal. ******************
+--	****************** Ganancias x Mes x Sucursal. ******************
 
 		-- Monto total de compras por sucursal x mes x anio
 		select sum(c.compra_precio_total) as total_mes, s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio 
@@ -411,6 +417,7 @@ go
 			join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_am_sucursal
 		group by s.sucursal_id, ca1.compra_auto_mes, ca1.compra_auto_anio
 		order by 2, 3
+		go
 
 		-- Monto total de ventas por sucursal x mes x anio
 		select sum(f.factura_precio_facturado) as total_mes, s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio 
@@ -421,20 +428,59 @@ go
 			join FSOCIETY.BI_sucursal s on s.sucursal_id = va.venta_am_sucursal
 		group by s.sucursal_id, va1.venta_auto_mes, va1.venta_auto_anio
 		order by 2, 3
+		go
 
 		-- Muestra del calculo final
+		-- TODO: Meter esto en una vista
 		select isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes, tv.venta_auto_anio from #total_compras_sucursal_mes_anio tc
 			right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
 		order by 2, 3
+		go
 
 --	****************** Tiempo Promedio en Stock de cada modelo de automovil ******************
 	
-	select modelo_codigo, avg(DATEDIFF(dd, compra_fecha, venta_fecha)) as dias_promedio_stock from 
-	(select m.modelo_codigo, ca.compra_auto_fecha as compra_fecha, isnull(va.venta_auto_fecha, getdate()) venta_fecha from FSOCIETY.BI_compra_automovil ca
-		left join FSOCIETY.BI_venta_automovil va on va.venta_auto_auto_id = ca.compra_auto_automovil_id
-		left join FSOCIETY.BI_Compra_Automoviles ca1 on ca1.compra_am_compra = ca.compra_auto_compra_nro
-		left join FSOCIETY.BI_Venta_Automoviles va1 on va1.venta_am_venta = va.venta_auto_nro_factura
-		join FSOCIETY.BI_automovil am on am.auto_id = ca.compra_auto_automovil_id
-		join FSOCIETY.Modelo m on am.auto_modelo_codigo = m.modelo_codigo) modelo_fechas
-	group by modelo_codigo
-	order by modelo_codigo
+		select modelo_codigo, avg(DATEDIFF(dd, compra_fecha, venta_fecha)) as dias_promedio_stock from 
+		(select m.modelo_codigo, ca.compra_auto_fecha as compra_fecha, isnull(va.venta_auto_fecha, getdate()) venta_fecha from FSOCIETY.BI_compra_automovil ca
+			left join FSOCIETY.BI_venta_automovil va on va.venta_auto_auto_id = ca.compra_auto_automovil_id
+			left join FSOCIETY.BI_Compra_Automoviles ca1 on ca1.compra_am_compra = ca.compra_auto_compra_nro
+			left join FSOCIETY.BI_Venta_Automoviles va1 on va1.venta_am_venta = va.venta_auto_nro_factura
+			join FSOCIETY.BI_automovil am on am.auto_id = ca.compra_auto_automovil_id
+			join FSOCIETY.Modelo m on am.auto_modelo_codigo = m.modelo_codigo) modelo_fechas
+		group by modelo_codigo
+		order by modelo_codigo
+		go
+
+		--TODO: Meter esto en una vista
+
+/* REQUERIMIENTOS FUNCIONALES SOBRE LAS AUTOPARTES*/
+
+-- ****************** Precio Promedio de cada autoparte, vendida y comprada ******************
+
+	-- Precio promedio de venta de cada autoparte
+	select cast(avg(f.factura_precio_facturado) as decimal(18,2)) as precio_promedio_venta, a.autoparte_codigo, a.autoparte_descripcion 
+	into #precio_promedio_venta_autoparte
+	from FSOCIETY.BI_factura f 
+		join FSOCIETY.BI_Venta_Autopartes va on f.factura_nro_factura = va.venta_ap_venta_nro
+		join FSOCIETY.BI_venta_autoparte va1 on va1.venta_autoparte_factura_nro = va.venta_ap_venta_nro
+		join FSOCIETY.BI_autoparte a on va1.venta_autoparte_id = a.autoparte_codigo
+	group by a.autoparte_codigo, a.autoparte_descripcion
+	go
+
+	-- Precio promedio de venta de cada autoparte
+	select cast(avg(c.compra_precio_total) as decimal(18,2)) as precio_promedio_compra, a.autoparte_codigo, a.autoparte_descripcion 
+	into #precio_promedio_compra_autoparte
+	from FSOCIETY.BI_compra c
+		join FSOCIETY.BI_Compra_Autopartes ca on ca.compra_ap_compra = c.compra_nro
+		join FSOCIETY.BI_compra_autoparte ca1 on ca.compra_ap_compra = ca1.compra_autoparte_compra_nro
+		join FSOCIETY.BI_autoparte a on ca1.compra_autoparte_id = a.autoparte_codigo
+	group by a.autoparte_codigo, a.autoparte_descripcion
+	go
+
+	/* TODO: Falta hacer esta vista
+	create view BI_promedio_compra_venta_autoparte as
+	select ca.autoparte_codigo, ca.precio_promedio_compra, va.precio_promedio_venta from #precio_promedio_compra_autoparte ca join #precio_promedio_venta_autoparte va on ca.autoparte_codigo = va.autoparte_codigo
+	*/
+
+-- ****************** Ganancias x Mes x Sucursal.  ******************
+
+-- ****************** Máxima cantidad de stock por cada sucursal (anual) ******************
