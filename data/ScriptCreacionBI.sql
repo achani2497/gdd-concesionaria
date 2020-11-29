@@ -445,7 +445,8 @@ go
 		go
 
 		-- Con este select creo la tabla que voy a utilizar en la view
-		select (select * from #precio_promedio_venta) as precio_promedio_venta, (select * from #precio_promedio_compra) as precio_promedio_compra into promedios_compra_venta_autos
+		select (select * from #precio_promedio_venta) as precio_promedio_venta, (select * from #precio_promedio_compra) as precio_promedio_compra 
+		into promedios_compra_venta_autos
 		go
 
 		-- View del reporte
@@ -483,7 +484,7 @@ go
 
 		-- Con este select creo la estructura de la tabla que voy a utilizar para hacer la vista que junta toda la informacion
 		select top 0 isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes as mes, tv.venta_auto_anio as anio 
-		into gancias_sucursal_mes
+		into ganancias_sucursal_mes
 		from #total_compras_sucursal_mes_anio tc
 			right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
 		order by 2, 3
@@ -502,7 +503,7 @@ go
 		fetch next from cursor_ganancias_sucursal_mes into @ganancia, @sucursal, @mes, @anio
 		while(@@FETCH_STATUS = 0)
 			begin
-				insert into gancias_sucursal_mes values (@ganancia, @sucursal, @mes, @anio)
+				insert into ganancias_sucursal_mes values (@ganancia, @sucursal, @mes, @anio)
 
 				fetch next from cursor_ganancias_sucursal_mes into @ganancia, @sucursal, @mes, @anio
 			end
@@ -514,7 +515,7 @@ go
 
 		-- View del reporte
 		create view BI_Reporte_ganancias_autos as
-			select * from gancias_sucursal_mes
+			select * from ganancias_sucursal_mes
 		go
 
 		drop table #total_compras_sucursal_mes_anio
@@ -562,11 +563,22 @@ go
 			join FSOCIETY.BI_autoparte a on ca1.compra_autoparte_id = a.autoparte_codigo
 		group by a.autoparte_codigo, a.autoparte_descripcion
 		go
+ 
+		-- Con este select junto toda la informacion en una sola tabla
+		select ca.autoparte_descripcion, ca.precio_promedio_compra, va.precio_promedio_venta 
+		into promedio_venta_compra_autopartes
+		from #precio_promedio_compra_autoparte ca 
+			join #precio_promedio_venta_autoparte va on ca.autoparte_codigo = va.autoparte_codigo
+		go
+		
+		-- View del reporte
+		create view BI_Reporte_promedio_venta_compra_autoparte as
+			select * from promedio_venta_compra_autopartes
+		go
 
-	/* TODO: Falta hacer esta vista
-	create view BI_promedio_compra_venta_autoparte as
-	select ca.autoparte_codigo, ca.precio_promedio_compra, va.precio_promedio_venta from #precio_promedio_compra_autoparte ca join #precio_promedio_venta_autoparte va on ca.autoparte_codigo = va.autoparte_codigo
-	*/
+		drop table #precio_promedio_compra_autoparte
+		drop table #precio_promedio_venta_autoparte
+		go
 
 -- ****************** Ganancias x Mes x Sucursal. (AUTOPARTES) ******************
 
