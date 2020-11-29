@@ -629,3 +629,45 @@ go
 		*/
 
 -- ****************** Máxima cantidad de stock por cada sucursal (anual) ******************
+		select * from FSOCIETY.BI_compra_autoparte
+
+		-- Este select me da la cantidad total por autoparte que compraron las sucursales en distintos años
+		select s.sucursal_id, ca1.compra_autoparte_autoparte_id, sum(ca1.compra_autoparte_cantidad) total_comprado, ca1.compra_autoparte_anio 
+		into #total_ap_compradas_x_sucursal_x_anio
+		from FSOCIETY.BI_Compra_Autopartes ca 
+			join FSOCIETY.BI_compra_autoparte ca1 on ca.compra_ap_compra = ca1.compra_autoparte_compra_nro
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = ca.compra_ap_sucursal
+		group by s.sucursal_id, ca1.compra_autoparte_autoparte_id, ca1.compra_autoparte_anio
+		order by s.sucursal_id, ca1.compra_autoparte_autoparte_id
+		go
+
+		-- Este select me da la cantidad total por autoparte que vendieron las sucursales en distintos años
+		select s.sucursal_id, va1.venta_autoparte_autoparte_id, sum(va1.venta_autoparte_cantidad) total_vendido, va1.venta_autoparte_anio 
+		into #total_ap_vendidas_x_sucursal_x_anio
+		from FSOCIETY.BI_Venta_Autopartes va 
+			join FSOCIETY.BI_venta_autoparte va1 on va.venta_ap_venta_nro = va1.venta_autoparte_factura_nro
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = va.venta_ap_sucursal
+		group by s.sucursal_id, va1.venta_autoparte_autoparte_id, va1.venta_autoparte_anio
+		order by s.sucursal_id, va1.venta_autoparte_autoparte_id
+		go
+
+		-- Con este select meto el stock final en una tabla
+		select v.sucursal_id, v.venta_autoparte_autoparte_id as autoparte_id, (isnull(c.total_comprado, 0) - isnull(v.total_vendido,0)) as stock, v.venta_autoparte_anio as anio 
+		into stock_sucursal_anio
+		from #total_ap_vendidas_x_sucursal_x_anio v 
+			left join #total_ap_compradas_x_sucursal_x_anio c on 
+				v.sucursal_id = c.sucursal_id and 
+				v.venta_autoparte_autoparte_id = c.compra_autoparte_autoparte_id and
+				v.venta_autoparte_anio = c.compra_autoparte_anio
+		order by v.sucursal_id, autoparte_id, v.venta_autoparte_anio
+		go
+
+		--Vista del Reporte
+		create view BI_Reporte_stock_x_sucursal_anio as
+			select * from stock_sucursal_anio
+		go
+
+		/* Este select es para ver el reporte mas ordenado
+		select * from BI_Reporte_stock_x_sucursal_anio
+		order by sucursal_id, autoparte_id, anio
+		*/
