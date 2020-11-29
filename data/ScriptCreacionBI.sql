@@ -191,20 +191,6 @@ go
 		from FSOCIETY.Venta_Auto va
 			join FSOCIETY.Factura f on f.factura_nro_factura = va.venta_auto_factura_nro
 		go
-/*
-	drop table FSOCIETY.BI_cliente
-	drop table FSOCIETY.BI_fabricante_auto
-	drop table FSOCIETY.BI_modelo
-	drop table FSOCIETY.BI_sucursal
-	drop table FSOCIETY.BI_factura
-	drop table FSOCIETY.BI_tipo_de_automovil
-	drop table FSOCIETY.BI_tipo_de_caja
-	drop table FSOCIETY.BI_tipo_de_motor
-	drop table FSOCIETY.BI_tipo_de_transmision
-	drop table FSOCIETY.BI_compra
-	drop table FSOCIETY.BI_compra_automovil
-	drop table FSOCIETY.BI_venta_automovil
-*/
 
 	--Autoparte
 	create table FSOCIETY.BI_autoparte(
@@ -261,13 +247,6 @@ go
 		select va.venta_autoparte_factura_nro, va.venta_autoparte_autoparte_id, va.venta_autoparte_cantidad, va.venta_autoparte_precio_unitario, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Autoparte va
 			join FSOCIETY.Factura f on f.factura_nro_factura = va.venta_autoparte_factura_nro
 		go
-
-/*
-	drop table FSOCIETY.BI_autoparte
-	drop table FSOCIETY.BI_rubro_autoparte
-	drop table FSOCIETY.BI_compra_autoparte
-	drop table FSOCIETY.BI_venta_autoparte
-*/
 
 /* -- CREACION DE TABLAS DE HECHOS -- */
 
@@ -350,12 +329,13 @@ go
 		order by f.factura_sucursal
 		go
 
-/*
-	drop table FSOCIETY.BI_Compra_Automoviles
-	drop table FSOCIETY.BI_Compra_Autopartes
-	drop table FSOCIETY.BI_Venta_Automoviles
-	drop table FSOCIETY.BI_Venta_Autopartes
-*/
+
+
+
+
+
+
+
 
 
 
@@ -423,11 +403,6 @@ go
 		drop table #ventas_sucursal_mes_anio
 		go
 
-		/* Para mostrar el reporte ordenado
-		select * from BI_Reporte_compras_ventas_autos order by sucursal_id, mes
-		go
-		*/
-
 --	****************** Precio promedio de automóviles, vendidos y comprados. ******************
 	
 		-- Precio promedio de autos comprados
@@ -448,7 +423,7 @@ go
 		select (select * from #precio_promedio_venta) as precio_promedio_venta, (select * from #precio_promedio_compra) as precio_promedio_compra 
 		into promedios_compra_venta_autos
 		go
-
+		
 		-- View del reporte
 		create view BI_Reporte_precio_promedio_compra_venta_autos as
 			select * from promedios_compra_venta_autos
@@ -536,10 +511,15 @@ go
 			group by modelo_nombre
 			go
 
-		/* Para mostrar el reporte ordenado
-		select * from BI_Reporte_tiempo_promedio_en_stock_modelo order by modelo_nombre
-		go
-		*/
+
+
+
+
+
+
+
+
+
 
 /* REQUERIMIENTOS FUNCIONALES SOBRE LAS AUTOPARTES*/
 -- ****************** Precio Promedio de cada autoparte, vendida y comprada ******************
@@ -571,6 +551,7 @@ go
 			join #precio_promedio_venta_autoparte va on ca.autoparte_codigo = va.autoparte_codigo
 		go
 		
+
 		-- View del reporte
 		create view BI_Reporte_promedio_venta_compra_autoparte as
 			select * from promedio_venta_compra_autopartes
@@ -623,13 +604,7 @@ go
 		drop table #total_vendido_autoparte_sucursal_mes
 		go
 
-		/*
-		select * from BI_Reporte_ganancias_autopartes order by sucursal_id, mes
-		go
-		*/
-
 -- ****************** Máxima cantidad de stock por cada sucursal (anual) ******************
-		select * from FSOCIETY.BI_compra_autoparte
 
 		-- Este select me da la cantidad total por autoparte que compraron las sucursales en distintos años
 		select s.sucursal_id, ca1.compra_autoparte_autoparte_id, sum(ca1.compra_autoparte_cantidad) total_comprado, ca1.compra_autoparte_anio 
@@ -667,7 +642,75 @@ go
 			select * from stock_sucursal_anio
 		go
 
-		/* Este select es para ver el reporte mas ordenado
-		select * from BI_Reporte_stock_x_sucursal_anio
-		order by sucursal_id, autoparte_id, anio
-		*/
+		drop table #total_ap_vendidas_x_sucursal_x_anio
+		drop table #total_ap_compradas_x_sucursal_x_anio
+
+
+/* SELECTS PARA MOSTRAR LAS METRICAS QUE NOS PIDEN LOS REQUERIMIENTOS */
+	
+	/*
+		-- Reporte de compras y ventas x sucursal x mes x anio
+		select * from BI_Reporte_compras_ventas_autos order by sucursal_id, mes
+
+		-- Reporte de Precio promedio de compra y de venta de los autos
+		select * from BI_Reporte_precio_promedio_compra_venta_autos
+
+		-- Reporte de ganancias por parte de los autos x sucursal x mes x anio
+		select * from BI_Reporte_ganancias_autos
+
+		-- Reporte de tiempo promedio en stock segun modelo 
+		select * from BI_Reporte_tiempo_promedio_en_stock_modelo order by modelo_nombre
+
+		-- Reporte del precio promedio de compra y de venta por autoparte
+		select * from BI_Reporte_promedio_venta_compra_autoparte
+		
+		-- Reporte de ganancias por parte de los autopartes x sucursal x mes x anio
+		select * from BI_Reporte_ganancias_autopartes order by sucursal_id, mes
+		
+		-- Reporte de stock maximo de autoparte x sucursal x anio
+		select * from BI_Reporte_stock_x_sucursal_anio order by sucursal_id, autoparte_id, anio
+	*/
+
+/* DROPS */
+/*
+	drop table FSOCIETY.BI_cliente
+	drop table FSOCIETY.BI_fabricante_auto
+	drop table FSOCIETY.BI_modelo
+	drop table FSOCIETY.BI_sucursal
+	drop table FSOCIETY.BI_factura
+	drop table FSOCIETY.BI_tipo_de_automovil
+	drop table FSOCIETY.BI_tipo_de_caja
+	drop table FSOCIETY.BI_tipo_de_motor
+	drop table FSOCIETY.BI_tipo_de_transmision
+	drop table FSOCIETY.BI_compra
+	drop table FSOCIETY.BI_automovil
+	drop table FSOCIETY.BI_compra_automovil
+	drop table FSOCIETY.BI_venta_automovil
+
+	drop table FSOCIETY.BI_autoparte
+	drop table FSOCIETY.BI_rubro_autoparte
+	drop table FSOCIETY.BI_compra_autoparte
+	drop table FSOCIETY.BI_venta_autoparte
+
+	drop table FSOCIETY.BI_Compra_Automoviles
+	drop table FSOCIETY.BI_Compra_Autopartes
+	drop table FSOCIETY.BI_Venta_Automoviles
+	drop table FSOCIETY.BI_Venta_Autopartes
+
+	drop view BI_Reporte_compras_ventas_autos
+	drop view BI_Reporte_precio_promedio_compra_venta_autos
+	drop view BI_Reporte_ganancias_autos
+	drop view BI_Reporte_tiempo_promedio_en_stock_modelo
+	drop view BI_Reporte_promedio_venta_compra_autoparte
+	drop view BI_Reporte_ganancias_autopartes
+	drop view BI_Reporte_stock_x_sucursal_anio
+
+	drop table promedios_compra_venta_autos
+	drop table compras_ventas_autos
+	drop table ganancias_sucursal_mes
+	drop table promedio_venta_compra_autopartes
+	drop table ganancias_autopartes_sucursal_mes
+	drop table stock_sucursal_anio
+
+*/
+
