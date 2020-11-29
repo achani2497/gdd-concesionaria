@@ -73,7 +73,7 @@ go
 		insert into FSOCIETY.BI_sucursal
 		select * from FSOCIETY.Sucursal
 		go
-
+		
 	--Factura
 	CREATE TABLE FSOCIETY.BI_factura(
 		factura_nro_factura decimal(18,0) primary key,
@@ -707,7 +707,7 @@ go
 
 		drop table #total_ap_vendidas_x_sucursal_x_anio
 		drop table #total_ap_compradas_x_sucursal_x_anio
-
+		go
 
 /* SELECTS PARA MOSTRAR LAS METRICAS QUE NOS PIDEN LOS REQUERIMIENTOS */
 	
@@ -739,16 +739,14 @@ go
 	drop table FSOCIETY.BI_cliente
 	drop table FSOCIETY.BI_fabricante_auto
 	drop table FSOCIETY.BI_modelo
-	drop table FSOCIETY.BI_sucursal
-	drop table FSOCIETY.BI_factura
 	drop table FSOCIETY.BI_tipo_de_automovil
 	drop table FSOCIETY.BI_tipo_de_caja
 	drop table FSOCIETY.BI_tipo_de_motor
 	drop table FSOCIETY.BI_tipo_de_transmision
-	drop table FSOCIETY.BI_compra
 	drop table FSOCIETY.BI_automovil
-	drop table FSOCIETY.BI_compra_automovil
 	drop table FSOCIETY.BI_venta_automovil
+	drop table FSOCIETY.BI_rango_etario
+	drop table FSOCIETY.BI_potencia
 
 	drop table FSOCIETY.BI_autoparte
 	drop table FSOCIETY.BI_rubro_autoparte
@@ -759,6 +757,11 @@ go
 	drop table FSOCIETY.BI_Compra_Autopartes
 	drop table FSOCIETY.BI_Venta_Automoviles
 	drop table FSOCIETY.BI_Venta_Autopartes
+
+	drop table FSOCIETY.BI_sucursal
+	drop table FSOCIETY.BI_factura
+	drop table FSOCIETY.BI_compra
+	drop table FSOCIETY.BI_compra_automovil
 
 	drop view BI_Reporte_compras_ventas_autos
 	drop view BI_Reporte_precio_promedio_compra_venta_autos
@@ -775,5 +778,7 @@ go
 	drop table ganancias_autopartes_sucursal_mes
 	drop table stock_sucursal_anio
 
+	drop function FSOCIETY.BI_asignar_rango_de_potencia
+	drop function FSOCIETY.BI_asignar_rango_etario
 */
 
