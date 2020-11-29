@@ -430,7 +430,7 @@ go
 		order by 2, 3
 		go
 
-		-- Muestra del calculo final
+		-- Ganancia x sucursal x mes (AUTOS)
 		-- TODO: Meter esto en una vista
 		select isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes, tv.venta_auto_anio from #total_compras_sucursal_mes_anio tc
 			right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
@@ -481,6 +481,39 @@ go
 	select ca.autoparte_codigo, ca.precio_promedio_compra, va.precio_promedio_venta from #precio_promedio_compra_autoparte ca join #precio_promedio_venta_autoparte va on ca.autoparte_codigo = va.autoparte_codigo
 	*/
 
--- ****************** Ganancias x Mes x Sucursal.  ******************
+-- ****************** Ganancias x Mes x Sucursal. (AUTOPARTES) ******************
+
+	-- Total vendido x sucursal x mes
+	select sum(f.factura_precio_facturado) as total_facturado, s.sucursal_id, va1.venta_autoparte_mes, va1.venta_autoparte_anio 
+	into #total_vendido_autoparte_sucursal_mes
+	from FSOCIETY.BI_factura f
+		join FSOCIETY.BI_Venta_Autopartes va on f.factura_nro_factura = va.venta_ap_venta_nro
+		join FSOCIETY.BI_venta_autoparte va1 on va.venta_ap_venta_nro = va1.venta_autoparte_factura_nro
+		join FSOCIETY.BI_sucursal s on s.sucursal_id = va.venta_ap_sucursal
+	where f.factura_cantidad_facturada is not null
+	group by s.sucursal_id, va1.venta_autoparte_mes, va1.venta_autoparte_anio
+	order by 2, 3
+	go
+
+	-- Total comprado x sucursal x mes
+	select sum(c.compra_precio_total) as total_gastado, s.sucursal_id, ca1.compra_autoparte_mes, ca1.compra_autoparte_anio 
+	into #total_gastado_autoparte_sucursal_mes
+	from FSOCIETY.BI_compra c
+		join FSOCIETY.BI_Compra_Autopartes ca on c.compra_nro = ca.compra_ap_compra
+		join FSOCIETY.BI_compra_autoparte ca1 on ca1.compra_autoparte_compra_nro = ca.compra_ap_compra
+		join FSOCIETY.BI_sucursal s on s.sucursal_id = c.compra_sucursal
+	where c.compra_tipo_compra like 'ap'
+	group by s.sucursal_id, ca1.compra_autoparte_mes, ca1.compra_autoparte_anio
+	order by 2, 3
+	go
+
+	--Ganancia x sucursal x mes
+	select isnull(tv.total_mes,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes, tv.venta_auto_anio 
+	from #total_gastado_autoparte_sucursal_mes tg
+		right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
+	order by 2, 3
+	go
+
+	--TODO: Falta hacer la vista para englobar estos resultados
 
 -- ****************** Máxima cantidad de stock por cada sucursal (anual) ******************
