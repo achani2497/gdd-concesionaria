@@ -382,9 +382,46 @@ go
 		order by 2, 3
 		go
 
-		--TODO: Falta hacer una vista que junte todos los resultados
-		--drop table #compras_sucursal_mes_anio
-		--drop table #ventas_sucursal_mes_anio
+		-- Este cursor lo utilizo para poder llenar vista que junta toda la informacion
+		declare group_compras_ventas_autos cursor for
+			select v.sucursal_id, isnull(c.autos_comprados,0) as autos_comprados, v.autos_vendidos, v.venta_auto_mes, v.venta_auto_anio 
+				from #ventas_sucursal_mes_anio v 
+				left join #compras_sucursal_mes_anio c on c.sucursal_id = v.sucursal_id 
+					and c.compra_auto_mes = v.venta_auto_mes 
+					and c.compra_auto_anio = v.venta_auto_anio
+		go
+
+		-- Con este select creo la estructura de la tabla que voy a utilizar para hacer la vista que junta toda la informacion
+		select top 0 v.sucursal_id, isnull(c.autos_comprados,0) as autos_comprados, v.autos_vendidos, v.venta_auto_mes as mes, v.venta_auto_anio as anio
+		into compras_ventas_autos
+		from #ventas_sucursal_mes_anio v 
+			left join #compras_sucursal_mes_anio c on c.sucursal_id = v.sucursal_id 
+				and c.compra_auto_mes = v.venta_auto_mes 
+				and c.compra_auto_anio = v.venta_auto_anio
+		go
+
+		-- Inserto todos los registros en la tabla que voy a utilizar para la view
+		declare @sucursal_id int, @autos_comprados int, @autos_vendidos int, @mes int, @anio int
+		open group_compras_ventas_autos
+			fetch next from group_compras_ventas_autos into @sucursal_id, @autos_comprados, @autos_vendidos, @mes, @anio
+				while (@@FETCH_STATUS = 0)
+					begin
+						insert into compras_ventas_autos values (@sucursal_id, @autos_comprados, @autos_vendidos, @mes, @anio)
+
+						fetch next from group_compras_ventas_autos into @sucursal_id, @autos_comprados, @autos_vendidos, @mes, @anio
+					end
+		close group_compras_ventas_autos
+		deallocate group_compras_ventas_autos
+		go
+
+		-- View del reporte
+		create view BI_Reporte_compras_ventas_autos as
+			select * from compras_ventas_autos
+		go
+
+		drop table #compras_sucursal_mes_anio
+		drop table #ventas_sucursal_mes_anio
+		go
 
 --	****************** Precio promedio de automóviles, vendidos y comprados. ******************
 	
@@ -430,51 +467,82 @@ go
 		order by 2, 3
 		go
 
-		-- Ganancia x sucursal x mes (AUTOS)
-		-- TODO: Meter esto en una vista
-		select isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes, tv.venta_auto_anio from #total_compras_sucursal_mes_anio tc
+		-- Con este select creo la estructura de la tabla que voy a utilizar para hacer la vista que junta toda la informacion
+		select top 0 isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes as mes, tv.venta_auto_anio as anio 
+		into gancias_sucursal_mes
+		from #total_compras_sucursal_mes_anio tc
 			right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
 		order by 2, 3
 		go
 
---	****************** Tiempo Promedio en Stock de cada modelo de automovil ******************
-	
-		select modelo_codigo, avg(DATEDIFF(dd, compra_fecha, venta_fecha)) as dias_promedio_stock from 
-		(select m.modelo_codigo, ca.compra_auto_fecha as compra_fecha, isnull(va.venta_auto_fecha, getdate()) venta_fecha from FSOCIETY.BI_compra_automovil ca
-			left join FSOCIETY.BI_venta_automovil va on va.venta_auto_auto_id = ca.compra_auto_automovil_id
-			left join FSOCIETY.BI_Compra_Automoviles ca1 on ca1.compra_am_compra = ca.compra_auto_compra_nro
-			left join FSOCIETY.BI_Venta_Automoviles va1 on va1.venta_am_venta = va.venta_auto_nro_factura
-			join FSOCIETY.BI_automovil am on am.auto_id = ca.compra_auto_automovil_id
-			join FSOCIETY.Modelo m on am.auto_modelo_codigo = m.modelo_codigo) modelo_fechas
-		group by modelo_codigo
-		order by modelo_codigo
+		-- Este cursor lo utilizo para poder llenar vista que junta toda la informacion
+		declare cursor_ganancias_sucursal_mes cursor for
+			select isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes as mes, tv.venta_auto_anio as anio from #total_compras_sucursal_mes_anio tc
+				right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
+			order by 2, 3
 		go
 
-		--TODO: Meter esto en una vista
+		-- Inserto todos los registros en la tabla que voy a utilizar para la view
+		open cursor_ganancias_sucursal_mes
+		declare @ganancia decimal(18,0), @sucursal int, @mes int, @anio int
+		fetch next from cursor_ganancias_sucursal_mes into @ganancia, @sucursal, @mes, @anio
+		while(@@FETCH_STATUS = 0)
+			begin
+				insert into gancias_sucursal_mes values (@ganancia, @sucursal, @mes, @anio)
+
+				fetch next from cursor_ganancias_sucursal_mes into @ganancia, @sucursal, @mes, @anio
+			end
+		go
+
+		close cursor_ganancias_sucursal_mes
+		deallocate cursor_ganancias_sucursal_mes
+		go
+
+		-- View del reporte
+		create view BI_Reporte_ganancias_autos as
+			select * from gancias_sucursal_mes
+		go
+
+		drop table #total_compras_sucursal_mes_anio
+		drop table #total_ventas_sucursal_mes_anio
+		go
+
+--	****************** Tiempo Promedio en Stock de cada modelo de automovil ******************
+		
+		--View del reporte
+		create view BI_Reporte_tiempo_promedio_en_stock_modelo as
+			select  modelo_nombre, avg(DATEDIFF(dd, compra_fecha, venta_fecha)) as dias_promedio_stock from 
+			(select m.modelo_nombre, ca.compra_auto_fecha as compra_fecha, isnull(va.venta_auto_fecha, getdate()) venta_fecha from FSOCIETY.BI_compra_automovil ca
+				left join FSOCIETY.BI_venta_automovil va on va.venta_auto_auto_id = ca.compra_auto_automovil_id
+				left join FSOCIETY.BI_Compra_Automoviles ca1 on ca1.compra_am_compra = ca.compra_auto_compra_nro
+				left join FSOCIETY.BI_Venta_Automoviles va1 on va1.venta_am_venta = va.venta_auto_nro_factura
+				join FSOCIETY.BI_automovil am on am.auto_id = ca.compra_auto_automovil_id
+				join FSOCIETY.Modelo m on am.auto_modelo_codigo = m.modelo_codigo) modelo_fechas
+			group by modelo_nombre
+			go
 
 /* REQUERIMIENTOS FUNCIONALES SOBRE LAS AUTOPARTES*/
-
 -- ****************** Precio Promedio de cada autoparte, vendida y comprada ******************
 
-	-- Precio promedio de venta de cada autoparte
-	select cast(avg(f.factura_precio_facturado) as decimal(18,2)) as precio_promedio_venta, a.autoparte_codigo, a.autoparte_descripcion 
-	into #precio_promedio_venta_autoparte
-	from FSOCIETY.BI_factura f 
-		join FSOCIETY.BI_Venta_Autopartes va on f.factura_nro_factura = va.venta_ap_venta_nro
-		join FSOCIETY.BI_venta_autoparte va1 on va1.venta_autoparte_factura_nro = va.venta_ap_venta_nro
-		join FSOCIETY.BI_autoparte a on va1.venta_autoparte_id = a.autoparte_codigo
-	group by a.autoparte_codigo, a.autoparte_descripcion
-	go
+		-- Precio promedio de venta de cada autoparte
+		select cast(avg(f.factura_precio_facturado) as decimal(18,2)) as precio_promedio_venta, a.autoparte_codigo, a.autoparte_descripcion 
+		into #precio_promedio_venta_autoparte
+		from FSOCIETY.BI_factura f 
+			join FSOCIETY.BI_Venta_Autopartes va on f.factura_nro_factura = va.venta_ap_venta_nro
+			join FSOCIETY.BI_venta_autoparte va1 on va1.venta_autoparte_factura_nro = va.venta_ap_venta_nro
+			join FSOCIETY.BI_autoparte a on va1.venta_autoparte_id = a.autoparte_codigo
+		group by a.autoparte_codigo, a.autoparte_descripcion
+		go
 
-	-- Precio promedio de venta de cada autoparte
-	select cast(avg(c.compra_precio_total) as decimal(18,2)) as precio_promedio_compra, a.autoparte_codigo, a.autoparte_descripcion 
-	into #precio_promedio_compra_autoparte
-	from FSOCIETY.BI_compra c
-		join FSOCIETY.BI_Compra_Autopartes ca on ca.compra_ap_compra = c.compra_nro
-		join FSOCIETY.BI_compra_autoparte ca1 on ca.compra_ap_compra = ca1.compra_autoparte_compra_nro
-		join FSOCIETY.BI_autoparte a on ca1.compra_autoparte_id = a.autoparte_codigo
-	group by a.autoparte_codigo, a.autoparte_descripcion
-	go
+		-- Precio promedio de venta de cada autoparte
+		select cast(avg(c.compra_precio_total) as decimal(18,2)) as precio_promedio_compra, a.autoparte_codigo, a.autoparte_descripcion 
+		into #precio_promedio_compra_autoparte
+		from FSOCIETY.BI_compra c
+			join FSOCIETY.BI_Compra_Autopartes ca on ca.compra_ap_compra = c.compra_nro
+			join FSOCIETY.BI_compra_autoparte ca1 on ca.compra_ap_compra = ca1.compra_autoparte_compra_nro
+			join FSOCIETY.BI_autoparte a on ca1.compra_autoparte_id = a.autoparte_codigo
+		group by a.autoparte_codigo, a.autoparte_descripcion
+		go
 
 	/* TODO: Falta hacer esta vista
 	create view BI_promedio_compra_venta_autoparte as
@@ -483,36 +551,36 @@ go
 
 -- ****************** Ganancias x Mes x Sucursal. (AUTOPARTES) ******************
 
-	-- Total vendido x sucursal x mes
-	select sum(f.factura_precio_facturado) as total_facturado, s.sucursal_id, va1.venta_autoparte_mes, va1.venta_autoparte_anio 
-	into #total_vendido_autoparte_sucursal_mes
-	from FSOCIETY.BI_factura f
-		join FSOCIETY.BI_Venta_Autopartes va on f.factura_nro_factura = va.venta_ap_venta_nro
-		join FSOCIETY.BI_venta_autoparte va1 on va.venta_ap_venta_nro = va1.venta_autoparte_factura_nro
-		join FSOCIETY.BI_sucursal s on s.sucursal_id = va.venta_ap_sucursal
-	where f.factura_cantidad_facturada is not null
-	group by s.sucursal_id, va1.venta_autoparte_mes, va1.venta_autoparte_anio
-	order by 2, 3
-	go
+		-- Total vendido x sucursal x mes
+		select sum(f.factura_precio_facturado) as total_facturado, s.sucursal_id, va1.venta_autoparte_mes, va1.venta_autoparte_anio 
+		into #total_vendido_autoparte_sucursal_mes
+		from FSOCIETY.BI_factura f
+			join FSOCIETY.BI_Venta_Autopartes va on f.factura_nro_factura = va.venta_ap_venta_nro
+			join FSOCIETY.BI_venta_autoparte va1 on va.venta_ap_venta_nro = va1.venta_autoparte_factura_nro
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = va.venta_ap_sucursal
+		where f.factura_cantidad_facturada is not null
+		group by s.sucursal_id, va1.venta_autoparte_mes, va1.venta_autoparte_anio
+		order by 2, 3
+		go
 
-	-- Total comprado x sucursal x mes
-	select sum(c.compra_precio_total) as total_gastado, s.sucursal_id, ca1.compra_autoparte_mes, ca1.compra_autoparte_anio 
-	into #total_gastado_autoparte_sucursal_mes
-	from FSOCIETY.BI_compra c
-		join FSOCIETY.BI_Compra_Autopartes ca on c.compra_nro = ca.compra_ap_compra
-		join FSOCIETY.BI_compra_autoparte ca1 on ca1.compra_autoparte_compra_nro = ca.compra_ap_compra
-		join FSOCIETY.BI_sucursal s on s.sucursal_id = c.compra_sucursal
-	where c.compra_tipo_compra like 'ap'
-	group by s.sucursal_id, ca1.compra_autoparte_mes, ca1.compra_autoparte_anio
-	order by 2, 3
-	go
+		-- Total comprado x sucursal x mes
+		select sum(c.compra_precio_total) as total_gastado, s.sucursal_id, ca1.compra_autoparte_mes, ca1.compra_autoparte_anio 
+		into #total_gastado_autoparte_sucursal_mes
+		from FSOCIETY.BI_compra c
+			join FSOCIETY.BI_Compra_Autopartes ca on c.compra_nro = ca.compra_ap_compra
+			join FSOCIETY.BI_compra_autoparte ca1 on ca1.compra_autoparte_compra_nro = ca.compra_ap_compra
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = c.compra_sucursal
+		where c.compra_tipo_compra like 'ap'
+		group by s.sucursal_id, ca1.compra_autoparte_mes, ca1.compra_autoparte_anio
+		order by 2, 3
+		go
 
-	--Ganancia x sucursal x mes
-	select isnull(tv.total_facturado,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_autoparte_mes, tv.venta_autoparte_anio
-	from #total_gastado_autoparte_sucursal_mes tg
-		right join #total_vendido_autoparte_sucursal_mes tv on tg.sucursal_id = tv.sucursal_id and tg.compra_autoparte_mes = tv.venta_autoparte_mes and tg.compra_autoparte_anio = tv.venta_autoparte_anio
-	order by 2, 3
-	go
+		--Ganancia x sucursal x mes
+		select isnull(tv.total_facturado,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_autoparte_mes, tv.venta_autoparte_anio
+		from #total_gastado_autoparte_sucursal_mes tg
+			right join #total_vendido_autoparte_sucursal_mes tv on tg.sucursal_id = tv.sucursal_id and tg.compra_autoparte_mes = tv.venta_autoparte_mes and tg.compra_autoparte_anio = tv.venta_autoparte_anio
+		order by 2, 3
+		go
 
 	--TODO: Falta hacer la vista para englobar estos resultados
 
