@@ -423,6 +423,11 @@ go
 		drop table #ventas_sucursal_mes_anio
 		go
 
+		/* Para mostrar el reporte ordenado
+		select * from BI_Reporte_compras_ventas_autos order by sucursal_id, mes
+		go
+		*/
+
 --	****************** Precio promedio de automóviles, vendidos y comprados. ******************
 	
 		-- Precio promedio de autos comprados
@@ -439,9 +444,18 @@ go
 			join FSOCIETY.BI_factura f on f.factura_nro_factura = va.venta_am_venta
 		go
 
-		-- TODO: Falta hacer una vista que junte todos los resultados
-		--drop table #precio_promedio_compra
-		--drop table #precio_promedio_venta
+		-- Con este select creo la tabla que voy a utilizar en la view
+		select (select * from #precio_promedio_venta) as precio_promedio_venta, (select * from #precio_promedio_compra) as precio_promedio_compra into promedios_compra_venta_autos
+		go
+
+		-- View del reporte
+		create view BI_Reporte_precio_promedio_compra_venta_autos as
+			select * from promedios_compra_venta_autos
+		go
+
+		drop table #precio_promedio_compra
+		drop table #precio_promedio_venta
+		go
 
 --	****************** Ganancias x Mes x Sucursal. ******************
 
@@ -521,6 +535,11 @@ go
 			group by modelo_nombre
 			go
 
+		/* Para mostrar el reporte ordenado
+		select * from BI_Reporte_tiempo_promedio_en_stock_modelo order by modelo_nombre
+		go
+		*/
+
 /* REQUERIMIENTOS FUNCIONALES SOBRE LAS AUTOPARTES*/
 -- ****************** Precio Promedio de cada autoparte, vendida y comprada ******************
 
@@ -576,12 +595,25 @@ go
 		go
 
 		--Ganancia x sucursal x mes
-		select isnull(tv.total_facturado,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_autoparte_mes, tv.venta_autoparte_anio
+		select isnull(tv.total_facturado,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_autoparte_mes as mes, tv.venta_autoparte_anio as anio
+		into ganancias_autopartes_sucursal_mes
 		from #total_gastado_autoparte_sucursal_mes tg
 			right join #total_vendido_autoparte_sucursal_mes tv on tg.sucursal_id = tv.sucursal_id and tg.compra_autoparte_mes = tv.venta_autoparte_mes and tg.compra_autoparte_anio = tv.venta_autoparte_anio
 		order by 2, 3
 		go
 
-	--TODO: Falta hacer la vista para englobar estos resultados
+		-- View del reporte
+		create view BI_Reporte_ganancias_autopartes as
+			select * from ganancias_autopartes_sucursal_mes
+		go
+
+		drop table #total_gastado_autoparte_sucursal_mes
+		drop table #total_vendido_autoparte_sucursal_mes
+		go
+
+		/*
+		select * from BI_Reporte_ganancias_autopartes order by sucursal_id, mes
+		go
+		*/
 
 -- ****************** Máxima cantidad de stock por cada sucursal (anual) ******************
