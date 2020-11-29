@@ -508,9 +508,9 @@ go
 	go
 
 	--Ganancia x sucursal x mes
-	select isnull(tv.total_mes,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes, tv.venta_auto_anio 
+	select isnull(tv.total_facturado,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_autoparte_mes, tv.venta_autoparte_anio
 	from #total_gastado_autoparte_sucursal_mes tg
-		right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
+		right join #total_vendido_autoparte_sucursal_mes tv on tg.sucursal_id = tv.sucursal_id and tg.compra_autoparte_mes = tv.venta_autoparte_mes and tg.compra_autoparte_anio = tv.venta_autoparte_anio
 	order by 2, 3
 	go
 
