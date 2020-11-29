@@ -11,6 +11,36 @@ go
 
 /*Creacion de las dimensiones*/
 
+	--Rango etario
+	create table FSOCIETY.BI_rango_etario(
+		rango_etario_id int identity(1,1) primary key,
+		rango_etario_descripcion nvarchar(30),
+		edad_inferior int,
+		edad_superior int null
+	)
+	go 
+		--Fill
+		insert into FSOCIETY.BI_rango_etario values ('Entre 18 y 30 años',18, 30), ('Entre 31 y 50 años',31, 50), ('Mayor a 50 años',51, null)
+		go
+		
+	--Funcion que asigna rango etario
+	create function FSOCIETY.BI_asignar_rango_etario (@edad int)
+	returns int
+	begin
+		declare @rango_etario_id int
+		
+		if(@edad < 31)
+			begin
+				select @rango_etario_id = r.rango_etario_id from FSOCIETY.BI_rango_etario r where @edad BETWEEN r.edad_inferior and r.edad_superior
+			end
+		else
+			begin
+				set @rango_etario_id = 3
+			end
+		return @rango_etario_id
+	end
+	go
+
 	--Cliente
 	create table FSOCIETY.BI_cliente(
 		cliente_id int primary key,
@@ -21,14 +51,15 @@ go
 		cliente_mail nvarchar(255),
 		cliente_fecha_nac datetime2(3),
 		cliente_sexo char(1),
-		cliente_edad tinyint
+		cliente_edad tinyint,
+		rango_etario int
 	)
 	go
 		--Fill
 		insert into FSOCIETY.BI_cliente
-		select c.cliente_id, c.cliente_nombre, c.cliente_apellido, c.cliente_direccion, c.cliente_dni, c.cliente_mail, c.cliente_fecha_nac, c.cliente_sexo, DATEDIFF(yy, c.cliente_fecha_nac, GETDATE()) from FSOCIETY.Cliente c
+		select c.cliente_id, c.cliente_nombre, c.cliente_apellido, c.cliente_direccion, c.cliente_dni, c.cliente_mail, c.cliente_fecha_nac, c.cliente_sexo, DATEDIFF(yy, c.cliente_fecha_nac, GETDATE()) as edad, FSOCIETY.BI_asignar_rango_etario(DATEDIFF(yy, c.cliente_fecha_nac, GETDATE())) as rango_etario from FSOCIETY.Cliente c
 		go
-
+		
 	--Sucursal
 	create table FSOCIETY.BI_sucursal(
 		sucursal_id int primary key,
@@ -59,18 +90,50 @@ go
 		FROM FSOCIETY.Factura
 		go
 
+	--Potencia
+	create table FSOCIETY.BI_potencia(
+		codigo_potencia int identity(1,1) primary key,
+		potencia_descripcion nvarchar(30),
+		limite_inferior_potencia int,
+		limite_superior_potencia int null
+	)
+	go
+		--Fill
+		insert into FSOCIETY.BI_potencia values ('Entre 50cv y 150cv', 50, 150), ('Entre 151cv y 300cv', 151, 300), ('Mas de 300cv', 300, null)
+		go
+
+	-- Funcion para asignar un rango de potencia
+	create function FSOCIETY.BI_asignar_rango_de_potencia(@potencia int)
+	returns int
+	begin
+	
+		declare @codigo_potencia int
+
+		if(@potencia < 300)
+			begin
+				select @codigo_potencia = p.codigo_potencia from FSOCIETY.BI_potencia p where @potencia between p.limite_inferior_potencia and p.limite_superior_potencia
+			end
+		else
+			begin
+				set @codigo_potencia = 3
+			end
+
+		return @codigo_potencia
+	end
+	go
+
 	--Modelo
 	create table FSOCIETY.BI_modelo(
 		modelo_codigo decimal(18,0),
 		modelo_nombre nvarchar(255),
-		modelo_potencia decimal(18,0)
+		modelo_rango_potencia int
 	)
-	go
+	go 
 		-- Fill
 		insert into FSOCIETY.BI_modelo
-		select * from FSOCIETY.Modelo
+		select m.modelo_codigo, m.modelo_nombre, FSOCIETY.BI_asignar_rango_de_potencia(m.modelo_potencia) as modelo_rango_potencia from FSOCIETY.Modelo m
 		go
-
+		
 	--Fabricante
 	create table FSOCIETY.BI_fabricante_auto(
 		fabricante_codigo int primary key,
