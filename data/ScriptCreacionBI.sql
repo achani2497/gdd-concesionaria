@@ -83,16 +83,21 @@ go
 	CREATE TABLE FSOCIETY.BI_factura(
 		factura_nro_factura decimal(18,0) primary key,
 		factura_sucursal int,
+		factura_cliente_id int,
 		factura_anio int,
 		factura_mes int,
 		factura_precio_facturado decimal(18,2),
 		factura_cantidad_facturada decimal(18,0)
 	)
-	GO
+	GO 
+		--Constraints
+		alter table FSOCIETY.BI_factura add constraint FK_BI_cliente_factura foreign key (factura_cliente_id) references FSOCIETY.BI_cliente(cliente_id)
+		go
+
 		--Fill
-		INSERT INTO FSOCIETY.BI_factura
-		SELECT factura_nro_factura, factura_sucursal_id, YEAR(factura_fecha), MONTH(factura_fecha), factura_precio_facturado, factura_cantidad_facturada
-		FROM FSOCIETY.Factura
+		insert into FSOCIETY.BI_factura
+		select f.factura_nro_factura, f.factura_sucursal_id, f.factura_cliente_id, YEAR(f.factura_fecha), MONTH(f.factura_fecha), f.factura_precio_facturado, f.factura_cantidad_facturada
+		from FSOCIETY.Factura f
 		go
 
 	--Potencia
@@ -254,7 +259,6 @@ go
 	create table FSOCIETY.BI_compra(
 		compra_nro decimal(18,0) primary key,
 		compra_sucursal int,
-		compra_cliente_id int,
 		compra_tipo_compra nchar(2),
 		compra_precio_total decimal(18,2),
 		compra_mes int,
@@ -263,13 +267,9 @@ go
 	)
 	go
 
-		--Constraints
-		alter table FSOCIETY.BI_compra add constraint FK_BI_cliente foreign key (compra_cliente_id) references FSOCIETY.BI_cliente(cliente_id)
-		go
-
 		--Fill
 		insert into FSOCIETY.BI_compra
-		select c.compra_nro, c.compra_sucursal_id, c.compra_cliente_id, c.compra_tipo_compra, c.compra_precio_total, MONTH(c.compra_fecha), YEAR(c.compra_fecha), c.compra_fecha 
+		select c.compra_nro, c.compra_sucursal_id, c.compra_tipo_compra, c.compra_precio_total, MONTH(c.compra_fecha), YEAR(c.compra_fecha), c.compra_fecha 
 		from FSOCIETY.Compra c
 		go
 
@@ -503,7 +503,7 @@ go
 
 		-- Con este select creo la estructura de la tabla que voy a utilizar para hacer la vista que junta toda la informacion
 		select top 0 v.sucursal_id, isnull(c.autos_comprados,0) as autos_comprados, v.autos_vendidos, v.venta_auto_mes as mes, v.venta_auto_anio as anio
-		into compras_ventas_autos
+		into FSOCIETY.BI_compras_ventas_autos
 		from #ventas_sucursal_mes_anio v 
 			left join #compras_sucursal_mes_anio c on c.sucursal_id = v.sucursal_id 
 				and c.compra_auto_mes = v.venta_auto_mes 
@@ -516,7 +516,7 @@ go
 			fetch next from group_compras_ventas_autos into @sucursal_id, @autos_comprados, @autos_vendidos, @mes, @anio
 				while (@@FETCH_STATUS = 0)
 					begin
-						insert into compras_ventas_autos values (@sucursal_id, @autos_comprados, @autos_vendidos, @mes, @anio)
+						insert into FSOCIETY.BI_compras_ventas_autos values (@sucursal_id, @autos_comprados, @autos_vendidos, @mes, @anio)
 
 						fetch next from group_compras_ventas_autos into @sucursal_id, @autos_comprados, @autos_vendidos, @mes, @anio
 					end
@@ -525,8 +525,8 @@ go
 		go
 
 		-- View del reporte
-		create view BI_Reporte_compras_ventas_autos as
-			select * from compras_ventas_autos
+		create view FSOCIETY_BI_VW_Reporte_compras_ventas_autos as
+			select * from FSOCIETY.BI_compras_ventas_autos
 		go
 
 		drop table #compras_sucursal_mes_anio
@@ -551,12 +551,12 @@ go
 
 		-- Con este select creo la tabla que voy a utilizar en la view
 		select (select * from #precio_promedio_venta) as precio_promedio_venta, (select * from #precio_promedio_compra) as precio_promedio_compra 
-		into promedios_compra_venta_autos
+		into FSOCIETY.BI_promedios_compra_venta_autos
 		go
 		
 		-- View del reporte
-		create view BI_Reporte_precio_promedio_compra_venta_autos as
-			select * from promedios_compra_venta_autos
+		create view FSOCIETY_BI_VW_Reporte_precio_promedio_compra_venta_autos as
+			select * from FSOCIETY.BI_promedios_compra_venta_autos
 		go
 
 		drop table #precio_promedio_compra
@@ -589,7 +589,7 @@ go
 
 		-- Con este select creo la estructura de la tabla que voy a utilizar para hacer la vista que junta toda la informacion
 		select top 0 isnull(tv.total_mes,0) - isnull(tc.total_mes,0) as ganancia, tv.sucursal_id, tv.venta_auto_mes as mes, tv.venta_auto_anio as anio 
-		into ganancias_sucursal_mes
+		into FSOCIETY.BI_ganancias_sucursal_mes
 		from #total_compras_sucursal_mes_anio tc
 			right join #total_ventas_sucursal_mes_anio tv on tc.sucursal_id = tv.sucursal_id and tc.compra_auto_mes = tv.venta_auto_mes and tc.compra_auto_anio = tv.venta_auto_anio
 		order by 2, 3
@@ -608,7 +608,7 @@ go
 		fetch next from cursor_ganancias_sucursal_mes into @ganancia, @sucursal, @mes, @anio
 		while(@@FETCH_STATUS = 0)
 			begin
-				insert into ganancias_sucursal_mes values (@ganancia, @sucursal, @mes, @anio)
+				insert into FSOCIETY.BI_ganancias_sucursal_mes values (@ganancia, @sucursal, @mes, @anio)
 
 				fetch next from cursor_ganancias_sucursal_mes into @ganancia, @sucursal, @mes, @anio
 			end
@@ -619,8 +619,8 @@ go
 		go
 
 		-- View del reporte
-		create view BI_Reporte_ganancias_autos as
-			select * from ganancias_sucursal_mes
+		create view FSOCIETY_BI_VW_Reporte_ganancias_autos as
+			select * from FSOCIETY.BI_ganancias_sucursal_mes
 		go
 
 		drop table #total_compras_sucursal_mes_anio
@@ -630,7 +630,7 @@ go
 --	****************** Tiempo Promedio en Stock de cada modelo de automovil ******************
 		
 		--View del reporte
-		create view BI_Reporte_tiempo_promedio_en_stock_modelo as
+		create view FSOCIETY_BI_VW_Reporte_tiempo_promedio_en_stock_modelo as
 			select  modelo_nombre, avg(DATEDIFF(dd, compra_fecha, venta_fecha)) as dias_promedio_stock from 
 			(select m.modelo_nombre, ca.compra_auto_fecha as compra_fecha, isnull(va.venta_auto_fecha, getdate()) venta_fecha from FSOCIETY.BI_compra_automovil ca
 				left join FSOCIETY.BI_venta_automovil va on va.venta_auto_auto_id = ca.compra_auto_automovil_id
@@ -676,15 +676,15 @@ go
  
 		-- Con este select junto toda la informacion en una sola tabla
 		select ca.autoparte_descripcion, ca.precio_promedio_compra, va.precio_promedio_venta 
-		into promedio_venta_compra_autopartes
+		into FSOCIETY.BI_promedio_venta_compra_autopartes
 		from #precio_promedio_compra_autoparte ca 
 			join #precio_promedio_venta_autoparte va on ca.autoparte_codigo = va.autoparte_codigo
 		go
 		
 
 		-- View del reporte
-		create view BI_Reporte_promedio_venta_compra_autoparte as
-			select * from promedio_venta_compra_autopartes
+		create view FSOCIETY_BI_VW_Reporte_promedio_venta_compra_autoparte as
+			select * from FSOCIETY.BI_promedio_venta_compra_autopartes
 		go
 
 		drop table #precio_promedio_compra_autoparte
@@ -719,15 +719,15 @@ go
 
 		--Ganancia x sucursal x mes
 		select isnull(tv.total_facturado,0) - isnull(tg.total_gastado,0) as ganancia, tv.sucursal_id, tv.venta_autoparte_mes as mes, tv.venta_autoparte_anio as anio
-		into ganancias_autopartes_sucursal_mes
+		into FSOCIETY.BI_ganancias_autopartes_sucursal_mes
 		from #total_gastado_autoparte_sucursal_mes tg
 			right join #total_vendido_autoparte_sucursal_mes tv on tg.sucursal_id = tv.sucursal_id and tg.compra_autoparte_mes = tv.venta_autoparte_mes and tg.compra_autoparte_anio = tv.venta_autoparte_anio
 		order by 2, 3
 		go
 
 		-- View del reporte
-		create view BI_Reporte_ganancias_autopartes as
-			select * from ganancias_autopartes_sucursal_mes
+		create view FSOCIETY_BI_VW_Reporte_ganancias_autopartes as
+			select * from FSOCIETY.BI_ganancias_autopartes_sucursal_mes
 		go
 
 		drop table #total_gastado_autoparte_sucursal_mes
@@ -758,7 +758,7 @@ go
 
 		-- Con este select meto el stock final en una tabla
 		select v.sucursal_id, v.venta_autoparte_autoparte_id as autoparte_id, (isnull(c.total_comprado, 0) - isnull(v.total_vendido,0)) as stock, v.venta_autoparte_anio as anio 
-		into stock_sucursal_anio
+		into FSOCIETY.BI_stock_sucursal_anio
 		from #total_ap_vendidas_x_sucursal_x_anio v 
 			left join #total_ap_compradas_x_sucursal_x_anio c on 
 				v.sucursal_id = c.sucursal_id and 
@@ -768,8 +768,8 @@ go
 		go
 
 		--Vista del Reporte
-		create view BI_Reporte_stock_x_sucursal_anio as
-			select * from stock_sucursal_anio
+		create view FSOCIETY_BI_VW_Reporte_stock_x_sucursal_anio as
+			select * from FSOCIETY.BI_stock_sucursal_anio
 		go
 
 		drop table #total_ap_vendidas_x_sucursal_x_anio
@@ -780,25 +780,25 @@ go
 	
 	/*
 		-- Reporte de compras y ventas x sucursal x mes x anio
-		select * from BI_Reporte_compras_ventas_autos order by sucursal_id, mes
+		select * from FSOCIETY_BI_VW_Reporte_compras_ventas_autos order by sucursal_id, mes
 
 		-- Reporte de Precio promedio de compra y de venta de los autos
-		select * from BI_Reporte_precio_promedio_compra_venta_autos
+		select * from FSOCIETY_BI_VW_Reporte_precio_promedio_compra_venta_autos
 
 		-- Reporte de ganancias por parte de los autos x sucursal x mes x anio
-		select * from BI_Reporte_ganancias_autos
+		select * from FSOCIETY_BI_VW_Reporte_ganancias_autos
 
 		-- Reporte de tiempo promedio en stock segun modelo 
-		select * from BI_Reporte_tiempo_promedio_en_stock_modelo order by modelo_nombre
+		select * from FSOCIETY_BI_VW_Reporte_tiempo_promedio_en_stock_modelo order by modelo_nombre
 
 		-- Reporte del precio promedio de compra y de venta por autoparte
-		select * from BI_Reporte_promedio_venta_compra_autoparte
+		select * from FSOCIETY_BI_VW_Reporte_promedio_venta_compra_autoparte
 		
 		-- Reporte de ganancias por parte de los autopartes x sucursal x mes x anio
-		select * from BI_Reporte_ganancias_autopartes order by sucursal_id, mes
+		select * from FSOCIETY_BI_VW_Reporte_ganancias_autopartes order by sucursal_id, mes
 		
 		-- Reporte de stock maximo de autoparte x sucursal x anio
-		select * from BI_Reporte_stock_x_sucursal_anio order by sucursal_id, autoparte_id, anio
+		select * from FSOCIETY_BI_VW_Reporte_stock_x_sucursal_anio order by sucursal_id, autoparte_id, anio
 	*/
 
 /* DROPS */
@@ -828,12 +828,12 @@ go
 	drop table FSOCIETY.BI_cliente
 	drop table FSOCIETY.BI_rango_etario
 	
-	drop table promedios_compra_venta_autos
-	drop table compras_ventas_autos
-	drop table ganancias_sucursal_mes
-	drop table promedio_venta_compra_autopartes
-	drop table ganancias_autopartes_sucursal_mes
-	drop table stock_sucursal_anio
+	drop table FSOCIETY.BI_promedios_compra_venta_autos
+	drop table FSOCIETY.BI_compras_ventas_autos
+	drop table FSOCIETY.BI_ganancias_sucursal_mes
+	drop table FSOCIETY.BI_promedio_venta_compra_autopartes
+	drop table FSOCIETY.BI_ganancias_autopartes_sucursal_mes
+	drop table FSOCIETY.BI_stock_sucursal_anio
 
 	drop function FSOCIETY.BI_asignar_rango_de_potencia
 	drop function FSOCIETY.BI_asignar_rango_etario
@@ -845,6 +845,6 @@ go
 	drop view BI_Reporte_promedio_venta_compra_autoparte
 	drop view BI_Reporte_ganancias_autopartes
 	drop view BI_Reporte_stock_x_sucursal_anio
-
+	
 */
 
