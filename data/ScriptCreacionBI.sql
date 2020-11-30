@@ -55,6 +55,11 @@ go
 		rango_etario int
 	)
 	go
+
+		--Constraints
+		alter table FSOCIETY.BI_cliente add constraint FK_cliente_rango_etario foreign key (rango_etario) references FSOCIETY.BI_rango_etario(rango_etario_id)
+		go
+		
 		--Fill
 		insert into FSOCIETY.BI_cliente
 		select c.cliente_id, c.cliente_nombre, c.cliente_apellido, c.cliente_direccion, c.cliente_dni, c.cliente_mail, c.cliente_fecha_nac, c.cliente_sexo, DATEDIFF(yy, c.cliente_fecha_nac, GETDATE()) as edad, FSOCIETY.BI_asignar_rango_etario(DATEDIFF(yy, c.cliente_fecha_nac, GETDATE())) as rango_etario from FSOCIETY.Cliente c
@@ -102,47 +107,15 @@ go
 		insert into FSOCIETY.BI_potencia values ('Entre 50cv y 150cv', 50, 150), ('Entre 151cv y 300cv', 151, 300), ('Mas de 300cv', 300, null)
 		go
 
-	-- Funcion para asignar un rango de potencia
-	create function FSOCIETY.BI_asignar_rango_de_potencia(@potencia int)
-	returns int
-	begin
-	
-		declare @codigo_potencia int
-
-		if(@potencia < 300)
-			begin
-				select @codigo_potencia = p.codigo_potencia from FSOCIETY.BI_potencia p where @potencia between p.limite_inferior_potencia and p.limite_superior_potencia
-			end
-		else
-			begin
-				set @codigo_potencia = 3
-			end
-
-		return @codigo_potencia
-	end
-	go
-
-	--Modelo
-	create table FSOCIETY.BI_modelo(
-		modelo_codigo decimal(18,0),
-		modelo_nombre nvarchar(255),
-		modelo_rango_potencia int
-	)
-	go 
-		-- Fill
-		insert into FSOCIETY.BI_modelo
-		select m.modelo_codigo, m.modelo_nombre, FSOCIETY.BI_asignar_rango_de_potencia(m.modelo_potencia) as modelo_rango_potencia from FSOCIETY.Modelo m
-		go
-		
-	--Fabricante
+	--Fabricante de auto
 	create table FSOCIETY.BI_fabricante_auto(
 		fabricante_codigo int primary key,
 		fabricante_nombre nvarchar(255)
 	)
-	go
+	go 
 		--Fill
 		insert into FSOCIETY.BI_fabricante_auto
-		select * from FSOCIETY.Fabricante
+		select distinct f.fabricante_codigo, f.fabricante_nombre from FSOCIETY.Automovil a join FSOCIETY.Fabricante f on a.auto_fabricante_codigo = f.fabricante_codigo 
 		go
 
 	--Tipo de Automovil
@@ -189,18 +162,92 @@ go
 		select * from FSOCIETY.Tipo_Transmision
 		go
 
+	--Fabricante autoparte
+	create table FSOCIETY.BI_fabricante_autoparte(
+		fabricante_ap_codigo int primary key,
+		fabricante_nombre nvarchar(255)
+	)
+	go
+
+		--Fill
+		insert into FSOCIETY.BI_fabricante_autoparte
+		select distinct f.fabricante_codigo, f.fabricante_nombre from FSOCIETY.Auto_Parte ad join FSOCIETY.Fabricante f on ad.autoparte_fabricante_codigo = f.fabricante_codigo
+		go
+
+	--Rubro Autoparte
+	create table FSOCIETY.BI_rubro_autoparte(
+		rubro_codigo int identity(1,1) primary key,
+		rubro_descripcion nvarchar(50)
+	)
+	go
+		--Fill
+		insert into FSOCIETY.BI_rubro_autoparte
+		select distinct a.autoparte_rubro from FSOCIETY.Auto_Parte a
+		go
+
+
+	-- Funcion para asignar un rango de potencia
+	create function FSOCIETY.BI_asignar_rango_de_potencia(@potencia int)
+	returns int
+	begin
+	
+		declare @codigo_potencia int
+
+		if(@potencia < 300)
+			begin
+				select @codigo_potencia = p.codigo_potencia from FSOCIETY.BI_potencia p where @potencia between p.limite_inferior_potencia and p.limite_superior_potencia
+			end
+		else
+			begin
+				set @codigo_potencia = 3
+			end
+
+		return @codigo_potencia
+	end
+	go
+
+	--Modelo
+	create table FSOCIETY.BI_modelo(
+		modelo_codigo decimal(18,0) primary key,
+		modelo_nombre nvarchar(255),
+		modelo_rango_potencia int
+	)
+	go
+		--Constraints
+		alter table FSOCIETY.BI_modelo add constraint FK_BI_modelo_potencia foreign key (modelo_rango_potencia) references FSOCIETY.BI_potencia(codigo_potencia)
+		go
+
+		-- Fill
+		insert into FSOCIETY.BI_modelo
+		select m.modelo_codigo, m.modelo_nombre, FSOCIETY.BI_asignar_rango_de_potencia(m.modelo_potencia) as modelo_rango_potencia from FSOCIETY.Modelo m
+		go
+		
 	--Automovil
 	create table FSOCIETY.BI_automovil(
 		auto_id int primary key,
 		auto_modelo_codigo decimal(18, 0),
+		auto_tipo_de_transmision decimal(18,0),
+		auto_tipo_motor decimal(18,0),
+		auto_tipo_caja decimal(18,0),
+		auto_tipo_de_automovil decimal(18,0),
+		auto_fabricante int,
 		auto_nro_chasis nvarchar(50),
 		auto_nro_motor nvarchar(50),
 		auto_patente nvarchar(50)
 	)
 	go
+		--Constraints
+		alter table FSOCIETY.BI_automovil add constraint FK_BI_automovil_modelo foreign key (auto_modelo_codigo) references FSOCIETY.BI_modelo(modelo_codigo)
+		alter table FSOCIETY.BI_automovil add constraint FK_BI_automovil_transmision foreign key (auto_tipo_de_transmision) references FSOCIETY.BI_tipo_de_transmision(tipo_transmision_codigo)
+		alter table FSOCIETY.BI_automovil add constraint FK_BI_automovil_motor foreign key (auto_tipo_motor) references FSOCIETY.BI_tipo_de_motor(tipo_motor)
+		alter table FSOCIETY.BI_automovil add constraint FK_BI_automovil_caja foreign key (auto_tipo_caja) references FSOCIETY.BI_tipo_de_caja(tipo_caja_codigo)
+		alter table FSOCIETY.BI_automovil add constraint FK_BI_auto_moviltipo_auto foreign key (auto_tipo_de_automovil) references FSOCIETY.BI_tipo_de_automovil(tipo_auto_codigo)
+		alter table FSOCIETY.BI_automovil add constraint FK_BI_auto_fabricante foreign key (auto_fabricante) references FSOCIETY.BI_fabricante_auto(fabricante_codigo)
+		go
+		
 		--Fill
 		insert into FSOCIETY.BI_automovil
-		select a.auto_id, a.auto_modelo_codigo, a.auto_nro_chasis, a.auto_nro_motor, a.auto_patente from FSOCIETY.Automovil a
+		select a.auto_id, a.auto_modelo_codigo, a.auto_tipo_transmision_codigo, a.auto_tipo_motor, a.auto_tipo_caja_codigo, a.auto_tipo_auto, a.auto_fabricante_codigo, a.auto_nro_chasis, a.auto_nro_motor, a.auto_patente from FSOCIETY.Automovil a
 		go
 
 	--Compra
@@ -215,6 +262,11 @@ go
 		compra_fecha datetime2(3)--Lo usamos para calcular el tiempo en stock de un modelo de automovil
 	)
 	go
+
+		--Constraints
+		alter table FSOCIETY.BI_compra add constraint FK_BI_cliente foreign key (compra_cliente_id) references FSOCIETY.BI_cliente(cliente_id)
+		go
+
 		--Fill
 		insert into FSOCIETY.BI_compra
 		select c.compra_nro, c.compra_sucursal_id, c.compra_cliente_id, c.compra_tipo_compra, c.compra_precio_total, MONTH(c.compra_fecha), YEAR(c.compra_fecha), c.compra_fecha 
@@ -230,6 +282,11 @@ go
 		compra_auto_fecha datetime2(3)--Lo usamos para calcular el tiempo en stock de un modelo de automovil
 	)
 	go
+
+		--Constraint
+		alter table FSOCIETY.BI_compra_automovil add constraint FK_BI_auto_compra foreign key (compra_auto_automovil_id) references FSOCIETY.BI_automovil(auto_id)
+		go
+
 		--Fill
 		insert into FSOCIETY.BI_compra_automovil
 		select ca.compra_auto_compra_nro, ca.compra_auto_id, c.compra_mes, c.compra_anio, c.compra_fecha
@@ -241,16 +298,19 @@ go
 	create table FSOCIETY.BI_venta_automovil(
 		venta_auto_nro_factura decimal(18,0) primary key,
 		venta_auto_auto_id int,
-		venta_auto_precio_sin_iva decimal(18,2),
-		venta_auto_precio_con_iva decimal(18,2),
 		venta_auto_mes int,
 		venta_auto_anio int,
 		venta_auto_fecha datetime2(3)
 	)
 	go
+
+		--Constraint
+		alter table FSOCIETY.BI_venta_automovil add constraint FK_BI_auto_venta foreign key (venta_auto_auto_id) references FSOCIETY.BI_automovil(auto_id)
+		go
+
 		--Fill
 		insert into FSOCIETY.BI_venta_automovil
-		select va.venta_auto_factura_nro, va.venta_auto_auto_id, va.venta_auto_precio_sin_iva, va.venta_auto_precio_con_iva, MONTH(f.factura_fecha), YEAR(f.factura_fecha), f.factura_fecha 
+		select va.venta_auto_factura_nro, va.venta_auto_auto_id, MONTH(f.factura_fecha), YEAR(f.factura_fecha), f.factura_fecha 
 		from FSOCIETY.Venta_Auto va
 			join FSOCIETY.Factura f on f.factura_nro_factura = va.venta_auto_factura_nro
 		go
@@ -258,23 +318,17 @@ go
 	--Autoparte
 	create table FSOCIETY.BI_autoparte(
 		autoparte_codigo decimal(18,0) primary key,
-		autoparte_descripcion nvarchar(255)
+		autoparte_descripcion nvarchar(255),
+		autoparte_fabricante int
 	)
 	go
-		--Fill
-		insert into FSOCIETY.BI_autoparte
-		select a.autoparte_codigo, a.autoparte_descripcion from FSOCIETY.Auto_Parte a
+		--Constraint
+		alter table FSOCIETY.BI_autoparte add constraint FK_BI_autoparte_fabricante foreign key (autoparte_fabricante) references FSOCIETY.BI_fabricante_autoparte(fabricante_ap_codigo)
 		go
 
-	--Rubro Autoparte
-	create table FSOCIETY.BI_rubro_autoparte(
-		rubro_codigo int identity(1,1) primary key,
-		rubro_descripcion nvarchar(50)
-	)
-	go
 		--Fill
-		insert into FSOCIETY.BI_rubro_autoparte
-		select a.autoparte_rubro from FSOCIETY.Auto_Parte a
+		insert into FSOCIETY.BI_autoparte
+		select a.autoparte_codigo, a.autoparte_descripcion, a.autoparte_fabricante_codigo from FSOCIETY.Auto_Parte a
 		go
 
 	--Compra Autoparte
@@ -288,6 +342,11 @@ go
 		compra_autoparte_anio int
 	)
 	go
+		--Constraint
+		alter table FSOCIETY.BI_compra_autoparte add constraint FK_BI_compra_ap_nro foreign key (compra_autoparte_compra_nro) references FSOCIETY.BI_compra(compra_nro)
+		alter table FSOCIETY.BI_compra_autoparte add constraint FK_BI_compra_ap_ap_id foreign key (compra_autoparte_autoparte_id) references FSOCIETY.BI_autoparte(autoparte_codigo)
+		go
+
 		--Fill
 		insert into FSOCIETY.BI_compra_autoparte
 		select ca.compra_autoparte_id, ca.compra_autoparte_compra_id, ca.compra_autoparte_autoparte_id, ca.compra_autoparte_precio_unitario, ca.compra_autoparte_cantidad, MONTH(c.compra_fecha), YEAR(c.compra_fecha) from FSOCIETY.Compra_Autoparte ca
@@ -305,11 +364,19 @@ go
 		venta_autoparte_anio int
 	)
 	go
+		--Constraints
+		alter table FSOCIETY.BI_venta_autoparte add constraint FK_BI_vta_ap_factura foreign key (venta_autoparte_factura_nro) references FSOCIETY.factura(factura_nro_factura)
+		alter table FSOCIETY.BI_venta_autoparte add constraint FK_BI_vta_ap_id foreign key (venta_autoparte_autoparte_id) references FSOCIETY.BI_autoparte(autoparte_codigo)
+		go
+
 		--Fill
 		insert into FSOCIETY.BI_venta_autoparte
 		select va.venta_autoparte_factura_nro, va.venta_autoparte_autoparte_id, va.venta_autoparte_cantidad, va.venta_autoparte_precio_unitario, MONTH(f.factura_fecha), YEAR(f.factura_fecha) from FSOCIETY.Venta_Autoparte va
 			join FSOCIETY.Factura f on f.factura_nro_factura = va.venta_autoparte_factura_nro
 		go
+
+
+
 
 /* -- CREACION DE TABLAS DE HECHOS -- */
 
@@ -736,14 +803,14 @@ go
 
 /* DROPS */
 /*
+	drop table FSOCIETY.BI_automovil
+	drop table FSOCIETY.BI_modelo
 	drop table FSOCIETY.BI_cliente
 	drop table FSOCIETY.BI_fabricante_auto
-	drop table FSOCIETY.BI_modelo
 	drop table FSOCIETY.BI_tipo_de_automovil
 	drop table FSOCIETY.BI_tipo_de_caja
 	drop table FSOCIETY.BI_tipo_de_motor
 	drop table FSOCIETY.BI_tipo_de_transmision
-	drop table FSOCIETY.BI_automovil
 	drop table FSOCIETY.BI_venta_automovil
 	drop table FSOCIETY.BI_rango_etario
 	drop table FSOCIETY.BI_potencia
