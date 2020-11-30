@@ -803,41 +803,31 @@ go
 
 /* DROPS */
 /*
+	drop table FSOCIETY.BI_venta_automovil
+	drop table FSOCIETY.BI_rubro_autoparte
+	drop table FSOCIETY.BI_compra_autoparte
+	drop table FSOCIETY.BI_venta_autoparte
+	drop table FSOCIETY.BI_autoparte
+	drop table FSOCIETY.BI_fabricante_autoparte
+	drop table FSOCIETY.BI_Compra_Automoviles
+	drop table FSOCIETY.BI_Compra_Autopartes
+	drop table FSOCIETY.BI_Venta_Automoviles
+	drop table FSOCIETY.BI_Venta_Autopartes
+	drop table FSOCIETY.BI_sucursal
+	drop table FSOCIETY.BI_factura
+	drop table FSOCIETY.BI_compra
+	drop table FSOCIETY.BI_compra_automovil
 	drop table FSOCIETY.BI_automovil
 	drop table FSOCIETY.BI_modelo
-	drop table FSOCIETY.BI_cliente
 	drop table FSOCIETY.BI_fabricante_auto
 	drop table FSOCIETY.BI_tipo_de_automovil
 	drop table FSOCIETY.BI_tipo_de_caja
 	drop table FSOCIETY.BI_tipo_de_motor
 	drop table FSOCIETY.BI_tipo_de_transmision
-	drop table FSOCIETY.BI_venta_automovil
-	drop table FSOCIETY.BI_rango_etario
 	drop table FSOCIETY.BI_potencia
-
-	drop table FSOCIETY.BI_autoparte
-	drop table FSOCIETY.BI_rubro_autoparte
-	drop table FSOCIETY.BI_compra_autoparte
-	drop table FSOCIETY.BI_venta_autoparte
-
-	drop table FSOCIETY.BI_Compra_Automoviles
-	drop table FSOCIETY.BI_Compra_Autopartes
-	drop table FSOCIETY.BI_Venta_Automoviles
-	drop table FSOCIETY.BI_Venta_Autopartes
-
-	drop table FSOCIETY.BI_sucursal
-	drop table FSOCIETY.BI_factura
-	drop table FSOCIETY.BI_compra
-	drop table FSOCIETY.BI_compra_automovil
-
-	drop view BI_Reporte_compras_ventas_autos
-	drop view BI_Reporte_precio_promedio_compra_venta_autos
-	drop view BI_Reporte_ganancias_autos
-	drop view BI_Reporte_tiempo_promedio_en_stock_modelo
-	drop view BI_Reporte_promedio_venta_compra_autoparte
-	drop view BI_Reporte_ganancias_autopartes
-	drop view BI_Reporte_stock_x_sucursal_anio
-
+	drop table FSOCIETY.BI_cliente
+	drop table FSOCIETY.BI_rango_etario
+	
 	drop table promedios_compra_venta_autos
 	drop table compras_ventas_autos
 	drop table ganancias_sucursal_mes
@@ -847,5 +837,14 @@ go
 
 	drop function FSOCIETY.BI_asignar_rango_de_potencia
 	drop function FSOCIETY.BI_asignar_rango_etario
+
+	drop view BI_Reporte_compras_ventas_autos
+	drop view BI_Reporte_precio_promedio_compra_venta_autos
+	drop view BI_Reporte_ganancias_autos
+	drop view BI_Reporte_tiempo_promedio_en_stock_modelo
+	drop view BI_Reporte_promedio_venta_compra_autoparte
+	drop view BI_Reporte_ganancias_autopartes
+	drop view BI_Reporte_stock_x_sucursal_anio
+
 */
 
