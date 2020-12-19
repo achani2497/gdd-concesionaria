@@ -247,6 +247,12 @@ go
 		group by a.autoparte_codigo
 	go
 	
+	-- Maxima cantidad de stock x año
+	create view FSOCIETY.BI_maxima_cant_stock_x_anio as
+		select ca.sucursal, t.anio, ca.autoparte, sum(ca.cantidad_comprada) as max_stock from FSOCIETY.BI_Compra_Autopartes ca
+			join FSOCIETY.BI_Tiempo t on t.tiempo_id = ca.tiempo_id
+		group by ca.sucursal, t.anio, ca.autoparte
+	go
 /*
 	Templates
 	alter table FSOCIETY.BI_ add constraint FK_BI_AP_ foreign key () references FSOCIETY.BI_()
