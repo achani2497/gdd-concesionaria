@@ -9,26 +9,7 @@ if(not exists(select * from sys.schemas where NAME = 'FSOCIETY'))
 go
 /*Creacion de las dimensiones*/
 
-/*
---Tiempo1
-create table FSOCIETY.BI_Tiempo(
-	fecha datetime2(3) primary key,
-	anio int,
-	mes int
-)
-go
-	--Fill 1
-	insert into FSOCIETY.BI_Tiempo
-		select compra_fecha, YEAR(compra_fecha), MONTH(compra_fecha) from FSOCIETY.Compra
-		group by compra_fecha
-		union
-		select factura_fecha, YEAR(factura_fecha), MONTH(factura_fecha) from FSOCIETY.Factura
-		group by factura_fecha
-	order by 1, 2, 3
-	go
-*/
-
---Tiempo 2
+--Tiempo
 create table FSOCIETY.BI_Tiempo(
 	tiempo_id int identity(1,1) primary key,
 	anio int,
@@ -36,41 +17,26 @@ create table FSOCIETY.BI_Tiempo(
 )
 go
 
-	--Fill 2
+	--Fill
 	insert into FSOCIETY.BI_Tiempo
 	select YEAR(compra_fecha), MONTH(compra_fecha) from FSOCIETY.Compra
 		union
 	select YEAR(factura_fecha), MONTH(factura_fecha) from FSOCIETY.Factura
 	order by 1, 2
 	go
-
---Rango etario
-create table FSOCIETY.BI_rango_etario(
-	rango_etario_id int identity(1,1) primary key,
-	rango_etario_descripcion nvarchar(30),
-	edad_inferior int,
-	edad_superior int null
-)
-go 
-	--Fill
-	insert into FSOCIETY.BI_rango_etario values ('Entre 18 y 30 años',18, 30), ('Entre 31 y 50 años',31, 50), ('Mayor a 50 años',51, null)
-	go
-		
+	
 --Funcion que asigna rango etario
 create function FSOCIETY.BI_asignar_rango_etario (@edad int)
-returns int
+returns varchar(20)
 begin
-	declare @rango_etario_id int
-		
-	if(@edad < 31)
-		begin
-			select @rango_etario_id = r.rango_etario_id from FSOCIETY.BI_rango_etario r where @edad BETWEEN r.edad_inferior and r.edad_superior
+	
+	return 
+		case 
+			when @edad between 18 and 30 then 'Entre 18 y 30 años'
+			when @edad between 31 and 50 then 'Entre 31 y 50 años'
+			else 'Mayor a 50 años'
 		end
-	else
-		begin
-			set @rango_etario_id = 3
-		end
-	return @rango_etario_id
+
 end
 go
 
@@ -84,18 +50,14 @@ create table FSOCIETY.BI_cliente(
 	cliente_mail nvarchar(255),
 	cliente_fecha_nac datetime2(3),
 	cliente_sexo char(1),
-	cliente_edad tinyint,
-	rango_etario int
+	rango_etario varchar(20)
 )
 go
 
---Constraints
-	alter table FSOCIETY.BI_cliente add constraint FK_cliente_rango_etario foreign key (rango_etario) references FSOCIETY.BI_rango_etario(rango_etario_id)
-	go
-		
 	--Fill
 	insert into FSOCIETY.BI_cliente
-	select c.cliente_id, c.cliente_nombre, c.cliente_apellido, c.cliente_direccion, c.cliente_dni, c.cliente_mail, c.cliente_fecha_nac, c.cliente_sexo, DATEDIFF(yy, c.cliente_fecha_nac, GETDATE()) as edad, FSOCIETY.BI_asignar_rango_etario(DATEDIFF(yy, c.cliente_fecha_nac, GETDATE())) as rango_etario from FSOCIETY.Cliente c
+	select c.cliente_id, c.cliente_nombre, c.cliente_apellido, c.cliente_direccion, c.cliente_dni, c.cliente_mail, c.cliente_fecha_nac, c.cliente_sexo, FSOCIETY.BI_asignar_rango_etario(DATEDIFF(yy, c.cliente_fecha_nac, GETDATE()))
+	from FSOCIETY.Cliente c
 	go
 
 --Sucursal
@@ -156,6 +118,24 @@ go
 	from FSOCIETY.Factura f
 	go
 
+--Compra
+create table FSOCIETY.BI_compra(
+	compra_nro decimal(18,0) primary key,
+	compra_sucursal int,
+	compra_tipo_compra nchar(2),
+	compra_precio_total decimal(18,2),
+	compra_mes int,
+	compra_anio int,
+	compra_fecha datetime2(3)--Lo usamos para calcular el tiempo en stock de un modelo de automovil
+)
+go
+
+	--Fill
+	insert into FSOCIETY.BI_compra
+	select c.compra_nro, c.compra_sucursal_id, c.compra_tipo_compra, c.compra_precio_total, MONTH(c.compra_fecha), YEAR(c.compra_fecha), c.compra_fecha 
+	from FSOCIETY.Compra c
+	go
+
 --Autoparte
 create table FSOCIETY.BI_autoparte(
 	autoparte_codigo decimal(18,0) primary key,
@@ -174,39 +154,89 @@ go
 	select a.autoparte_codigo, a.autoparte_descripcion, 1, a.autoparte_fabricante_codigo from FSOCIETY.Auto_Parte a
 	go
 
-create table FSOCIETY.BI_Venta_Autopartes(
-	tiempo_id int,
-	cliente int,
-	factura decimal(18,0),
-	sucursal int,
-	autoparte decimal(18,0),
-	fabricante int,
-	rubro_autoparte int,
-	cantidad_vendida int,
-	precio_unitario decimal(18,2)
-)
-go
-	--Constraint
-	alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_tiempo foreign key (tiempo_id) references FSOCIETY.BI_tiempo(tiempo_id)	
-	alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_cliente foreign key (cliente) references FSOCIETY.BI_cliente(cliente_id)
-	alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_factura foreign key (factura) references FSOCIETY.BI_Factura(factura_nro_factura)
-	alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_sucursal foreign key (sucursal) references FSOCIETY.BI_sucursal(sucursal_id)
-	alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_fabricante foreign key (fabricante) references FSOCIETY.BI_fabricante_autoparte(fabricante_ap_codigo)
-	alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_rubro_autoparte foreign key (rubro_autoparte) references FSOCIETY.BI_rubro_autoparte(rubro_codigo)
-	alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_autoparte foreign key (autoparte) references FSOCIETY.BI_autoparte(autoparte_codigo)
+/* CREACION DE TABLAS DE HECHOS */
+
+	-- VENTA DE AUTOPARTES
+	create table FSOCIETY.BI_Venta_Autopartes(
+		tiempo_id int,
+		cliente int,
+		factura decimal(18,0),
+		sucursal int,
+		autoparte decimal(18,0),
+		fabricante int,
+		rubro_autoparte int,
+		cantidad_vendida int,
+		precio_unitario decimal(18,2)
+	)
+	go
+		--Constraint
+		alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_tiempo foreign key (tiempo_id) references FSOCIETY.BI_tiempo(tiempo_id)	
+		alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_cliente foreign key (cliente) references FSOCIETY.BI_cliente(cliente_id)
+		alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_factura foreign key (factura) references FSOCIETY.BI_Factura(factura_nro_factura)
+		alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_sucursal foreign key (sucursal) references FSOCIETY.BI_sucursal(sucursal_id)
+		alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_fabricante foreign key (fabricante) references FSOCIETY.BI_fabricante_autoparte(fabricante_ap_codigo)
+		alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_rubro_autoparte foreign key (rubro_autoparte) references FSOCIETY.BI_rubro_autoparte(rubro_codigo)
+		alter table FSOCIETY.BI_Venta_Autopartes add constraint FK_BI_VAP_autoparte foreign key (autoparte) references FSOCIETY.BI_autoparte(autoparte_codigo)
+		go
+
+		--Fill
+		insert into FSOCIETY.BI_Venta_Autopartes
+		select t.tiempo_id, c.cliente_id, f.factura_nro_factura, s.sucursal_id, ap.autoparte_codigo, fap.fabricante_ap_codigo, rap.rubro_codigo, va.venta_autoparte_cantidad, va.venta_autoparte_precio_unitario
+		from FSOCIETY.BI_factura f
+			join FSOCIETY.BI_Tiempo t on f.factura_anio = t.anio and f.factura_mes = t.mes
+			join FSOCIETY.BI_cliente c on f.factura_cliente_id = c.cliente_id
+			join FSOCIETY.BI_sucursal s on f.factura_sucursal = s.sucursal_id
+			join FSOCIETY.Venta_Autoparte va on f.factura_nro_factura = va.venta_autoparte_factura_nro
+			join FSOCIETY.BI_autoparte ap on va.venta_autoparte_autoparte_id = ap.autoparte_codigo
+			join FSOCIETY.BI_fabricante_autoparte fap on ap.autoparte_fabricante = fap.fabricante_ap_codigo
+			join FSOCIETY.BI_rubro_autoparte rap on rap.rubro_codigo = ap.autoparte_rubro 
+		go
+
+	-- COMPRA DE AUTOPARTES
+	create table FSOCIETY.BI_Compra_Autopartes(
+		tiempo_id int,
+		compra decimal(18,0),
+		sucursal int,
+		autoparte decimal(18,0),
+		fabricante int,
+		rubro_autoparte int,
+		cantidad_comprada int,
+		precio_unitario decimal(18,2)
+	)
 	go
 
+	-- Constraints
+		alter table FSOCIETY.BI_Compra_Autopartes add constraint FK_BI_CAP_tiempo foreign key (tiempo_id) references FSOCIETY.BI_Tiempo(tiempo_id)
+		alter table FSOCIETY.BI_Compra_Autopartes add constraint FK_BI_CAP_compra foreign key (compra) references FSOCIETY.BI_compra(compra_nro)
+		alter table FSOCIETY.BI_Compra_Autopartes add constraint FK_BI_CAP_sucursal foreign key (sucursal) references FSOCIETY.BI_sucursal(sucursal_id)
+		alter table FSOCIETY.BI_Compra_Autopartes add constraint FK_BI_CAP_fabricante foreign key (fabricante) references FSOCIETY.BI_fabricante_autoparte(fabricante_ap_codigo)
+		alter table FSOCIETY.BI_Compra_Autopartes add constraint FK_BI_CAP_rubro foreign key (rubro_autoparte) references FSOCIETY.BI_rubro_autoparte(rubro_codigo)
+		alter table FSOCIETY.BI_Compra_Autopartes add constraint FK_BI_CAP_autoparte foreign key (autoparte) references FSOCIETY.BI_autoparte(autoparte_codigo)
+		go
+	
 	--Fill
-	insert into FSOCIETY.BI_Venta_Autopartes
-	select t.tiempo_id, c.cliente_id, f.factura_nro_factura, s.sucursal_id, ap.autoparte_codigo, fap.fabricante_ap_codigo, rap.rubro_codigo, va.venta_autoparte_cantidad, va.venta_autoparte_precio_unitario
-	from FSOCIETY.BI_factura f
-		join FSOCIETY.BI_Tiempo t on f.factura_anio = t.anio and f.factura_mes = t.mes
-		join FSOCIETY.BI_cliente c on f.factura_cliente_id = c.cliente_id
-		join FSOCIETY.BI_sucursal s on f.factura_sucursal = s.sucursal_id
-		join FSOCIETY.Venta_Autoparte va on f.factura_nro_factura = va.venta_autoparte_factura_nro
-		join FSOCIETY.BI_autoparte ap on va.venta_autoparte_autoparte_id = ap.autoparte_codigo
-		join FSOCIETY.BI_fabricante_autoparte fap on ap.autoparte_fabricante = fap.fabricante_ap_codigo
-		join FSOCIETY.BI_rubro_autoparte rap on rap.rubro_codigo = ap.autoparte_rubro 
+		insert into FSOCIETY.BI_Compra_Autopartes
+		select t.tiempo_id, co.compra_nro, s.sucursal_id, ap.autoparte_codigo, fap.fabricante_ap_codigo, rap.rubro_codigo, ca.compra_autoparte_cantidad, ca.compra_autoparte_precio_unitario
+		from FSOCIETY.BI_compra co
+			join FSOCIETY.BI_Tiempo t on co.compra_anio = t.anio and co.compra_mes = t.mes
+			join FSOCIETY.BI_sucursal s on co.compra_sucursal = s.sucursal_id
+			join FSOCIETY.Compra_Autoparte ca on co.compra_nro = ca.compra_autoparte_compra_id
+			join FSOCIETY.BI_autoparte ap on ca.compra_autoparte_autoparte_id = ap.autoparte_codigo
+			join FSOCIETY.BI_fabricante_autoparte fap on ap.autoparte_fabricante = fap.fabricante_ap_codigo
+			join FSOCIETY.BI_rubro_autoparte rap on rap.rubro_codigo = ap.autoparte_rubro 
+		go
+
+/* CREACION DE VISTAS */
+
+	-- Ganancias x sucursal x mes
+	create view FSOCIETY.BI_ganancias_sucursal_mes_autoparte as 
+		select s.sucursal_id, t.mes, sum(va.precio_unitario * va.cantidad_vendida - ca.precio_unitario * ca.cantidad_comprada) as ganancia from FSOCIETY.BI_compra c
+			join FSOCIETY.BI_Compra_Autopartes ca on c.compra_nro = ca.compra
+			join FSOCIETY.BI_Venta_Autopartes va on va.autoparte = ca.autoparte
+			join FSOCIETY.BI_factura f on f.factura_nro_factura = va.factura
+			join FSOCIETY.BI_sucursal s on s.sucursal_id = f.factura_sucursal
+			join FSOCIETY.BI_Tiempo t on va.tiempo_id = t.tiempo_id
+		group by s.sucursal_id, t.mes, t.anio
 	go
 
 /*
@@ -217,10 +247,11 @@ go
 	DROPS
 
 drop table FSOCIETY.BI_Venta_Autopartes
+drop table FSOCIETY.BI_Compra_Autopartes
 drop table FSOCIETY.BI_autoparte
 drop table FSOCIETY.BI_factura
+drop table FSOCIETY.BI_compra
 drop table FSOCIETY.BI_cliente
-drop table FSOCIETY.BI_rango_etario
 drop table FSOCIETY.BI_rubro_autoparte
 drop table FSOCIETY.BI_fabricante_autoparte
 drop table FSOCIETY.BI_sucursal
