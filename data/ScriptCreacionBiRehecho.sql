@@ -236,9 +236,17 @@ go
 			join FSOCIETY.BI_factura f on f.factura_nro_factura = va.factura
 			join FSOCIETY.BI_sucursal s on s.sucursal_id = f.factura_sucursal
 			join FSOCIETY.BI_Tiempo t on va.tiempo_id = t.tiempo_id
-		group by s.sucursal_id, t.mes, t.anio
+		group by s.sucursal_id, t.mes
 	go
 
+	-- Precio Promedio de Autoparte vendida y comprada
+	create view FSOCIETY.BI_precio_promedio_AP_vendida_comprada as
+		select a.autoparte_codigo, cast(AVG(ca.precio_unitario) as decimal(18,2)) as precio_promedio_compra, cast(AVG(va.precio_unitario) as decimal(18,2)) as precio_promedio_venta from FSOCIETY.BI_autoparte a
+			join FSOCIETY.BI_Compra_Autopartes ca on ca.autoparte = a.autoparte_codigo
+			join FSOCIETY.BI_Venta_Autopartes va on va.autoparte = a.autoparte_codigo
+		group by a.autoparte_codigo
+	go
+	
 /*
 	Templates
 	alter table FSOCIETY.BI_ add constraint FK_BI_AP_ foreign key () references FSOCIETY.BI_()
