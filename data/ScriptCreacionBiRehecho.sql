@@ -527,7 +527,11 @@ go
 		group by s.sucursal_id, t.mes
 		*/
 		-- Precio promedio de automoviles vendidos y comprados
-		
+		create view FSOCIETY.BI_precio_promedio_autos_vendidos_comprados as
+		select cast(avg(ca.precio) as decimal(18,2)) as precio_promedio_compra, cast(avg(va.precio_con_iva) as decimal(18,2)) as precio_promedio_venta from FSOCIETY.BI_automovil a
+			join FSOCIETY.BI_Compra_Automovil ca on ca.automovil = a.auto_id
+			left join FSOCIETY.BI_Venta_Automovil va on va.automovil = a.auto_id
+		go
 		
 		-- Ganancias x sucursal x mes
 		create view FSOCIETY.BI_ganancias_sucursal_mes_automoviles as
@@ -568,7 +572,6 @@ drop table FSOCIETY.BI_rubro_autoparte
 drop table FSOCIETY.BI_fabricante_autoparte
 drop table FSOCIETY.BI_sucursal
 drop table FSOCIETY.BI_tiempo
-
 drop table FSOCIETY.BI_automovil
 drop table FSOCIETY.BI_modelo
 drop table FSOCIETY.BI_potencia
